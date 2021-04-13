@@ -153,10 +153,12 @@ void femMeshLocal(const femMesh *theMesh, const int iElem, int *map, double *x, 
 {
     int j,nLocal = theMesh->nLocalNode;
     
-    for (j=0; j < nLocal; ++j) {
+    for (j=0; j < nLocal; ++j) 
+    {
         map[j] = theMesh->elem[iElem*nLocal+j];
         x[j]   = theMesh->X[map[j]];
-        y[j]   = theMesh->Y[map[j]]; }   
+        y[j]   = theMesh->Y[map[j]]; 
+    }   
 }
 
 femMesh *femMeshRead(const char *filename)
@@ -202,9 +204,6 @@ void femMeshFree(femMesh *theMesh)
     free(theMesh->Y);
     free(theMesh);
 }
-
-
-
 
 void femMeshWrite(const femMesh *theMesh, const char *filename)
 {
@@ -274,7 +273,6 @@ void femMeshRenumber(femMesh *theMesh, femRenumType renumType)
         default : Error("Unexpected renumbering option"); }
 }
 
-
 int femMeshComputeBand(femMesh *theMesh)
 {
     int iElem,j,myMax,myMin,myBand,map[4];
@@ -291,8 +289,7 @@ int femMeshComputeBand(femMesh *theMesh)
         if (myBand < (myMax - myMin)) myBand = myMax - myMin; }         
     return(++myBand);
 }
-
-                                                                                                          
+                                                                                                        
 femEdges *femEdgesCreate(femMesh *theMesh)
 {
     femEdges *theEdges = malloc(sizeof(femEdges));
@@ -362,7 +359,6 @@ int femEdgesCompare(const void *edgeOne, const void *edgeTwo)
                         return  0;
 }
 
-
 femSolver *femSolverCreate(int sizeLoc)
 {
     femSolver *mySolver = malloc(sizeof(femSolver));
@@ -413,7 +409,6 @@ void femSolverInit(femSolver *mySolver)
         case FEM_ITER : femIterativeSolverInit((femIterativeSolver *)mySolver->solver); break;
         default : Error("Unexpected solver type"); }
 }
-
 
 double femSolverGet(femSolver *mySolver,int i,int j)
 {

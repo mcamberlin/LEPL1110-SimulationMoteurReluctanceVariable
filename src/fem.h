@@ -1,4 +1,3 @@
-
 /*
  *  fem.h
  *  Library for LEPL1110 : Finite Elements for dummies

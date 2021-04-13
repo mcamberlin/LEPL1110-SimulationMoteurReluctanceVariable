@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/src/fem.h
+stdio.h
+-
+stdlib.h
+-
+math.h
+-
+string.h
+-
+assert.h
+-
+
+/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/src/motor.c
+motor.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/src/motor.h
+
+/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/src/motor.h
+fem.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/src/fem.h
+

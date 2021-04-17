@@ -340,7 +340,9 @@ femMesh *motorDomainCreate(const motorMesh *theMotorMesh, int iDomain)
     
     int shift = 0;
     for (int i=0; i < iDomain; i++)
-      shift += theMotorMesh->nElemDomain[i];
+    {
+        shift += theMotorMesh->nElemDomain[i];
+    }  
     theMesh->elem = &theMotorMesh->elem[3*shift];
     theMesh->nElem = theMotorMesh->nElemDomain[iDomain];
     return theMesh;

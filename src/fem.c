@@ -301,28 +301,39 @@ femEdges *femEdgesCreate(femMesh *theMesh)
     theEdges->nEdge = n;
     theEdges->nBoundary = n;
     
-    for (i = 0; i < theMesh->nElem; i++) {
+    for (i = 0; i < theMesh->nElem; i++) 
+    {
         int *elem = &(theMesh->elem[i*nLoc]);
-        for (j = 0; j < nLoc; j++) {
+        for (j = 0; j < nLoc; j++) 
+        {
             int id = i * nLoc + j;
             edges[id].elem[0] = i;
             edges[id].elem[1] = -1;
             edges[id].node[0] = elem[j];
-            edges[id].node[1] = elem[(j + 1) % nLoc]; }}
+            edges[id].node[1] = elem[(j + 1) % nLoc]; 
+        }
+    }
 
     qsort(theEdges->edges, theEdges->nEdge, sizeof(femEdge), femEdgesCompare);
 
     int index = 0;          
     int nBoundary = 0;
     
-    for (i=0; i < theEdges->nEdge; i++) {
-      if (i == theEdges->nEdge - 1 || femEdgesCompare(&edges[i],&edges[i+1]) != 0) {
-              edges[index] = edges[i];
-              nBoundary++; }
-      else {  edges[index] = edges[i];
-              edges[index].elem[1] = edges[i+1].elem[0];
-              i = i+1;}
-      index++; }
+    for (i=0; i < theEdges->nEdge; i++) 
+    {
+        if (i == theEdges->nEdge - 1 || femEdgesCompare(&edges[i],&edges[i+1]) != 0) 
+        {
+            edges[index] = edges[i];
+            nBoundary++; 
+        }
+        else 
+        {  
+            edges[index] = edges[i];
+            edges[index].elem[1] = edges[i+1].elem[0];
+            i = i+1;
+        }
+        index++; 
+    }
       
     theEdges->edges = realloc(edges, index * sizeof(femEdge));
     theEdges->nEdge = index;
@@ -448,9 +459,7 @@ void femSolverAssemble(femSolver* mySolver, double *Aloc, double *Bloc, double *
         case FEM_ITER : femIterativeSolverAssemble((femIterativeSolver *)mySolver->solver,Aloc,Bloc,Uloc,map,nLoc); break;
         default : Error("Unexpected solver type"); }
 }
-    
-
-  
+     
 double *femSolverEliminate(femSolver *mySolver)
 {
     double *soluce;
@@ -462,8 +471,6 @@ double *femSolverEliminate(femSolver *mySolver)
     return(soluce);
 }
 
-
-
 int femSolverConverged(femSolver *mySolver)
 {
     int  testConvergence;
@@ -474,7 +481,6 @@ int femSolverConverged(femSolver *mySolver)
         default : Error("Unexpected solver type"); }
     return(testConvergence);
 }
-
 
 femFullSystem *femFullSystemCreate(int size)
 {

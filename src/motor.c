@@ -31,6 +31,8 @@ void motorComputeCurrent(motor *theMotor)
 
 void motorComputeMagneticPotential(motor *theMotor)
 {
+    // Résolution inspirée du devoir 4 ainsi que de sa correction disponible sur https://www.youtube.com/watch?v=580gEIVVKe8.
+
     int size = theMotor->size; 
     motorMesh* theMesh = theMotor->mesh;
     double* a = theMotor->a;
@@ -47,6 +49,19 @@ void motorComputeMagneticPotential(motor *theMotor)
     int* nElemDomain = theMesh->nElemDomain;
     string* nameDomain = theMesh->nameDomain;
     int* domain = theMesh->domain;
+
+    /*
+    femMesh* statorMesh = malloc(sizeof(femMesh));
+    statorMesh->elem = elem[0]; // le stator est le premier
+    statorMesh->X = &X[0];
+    statorMesh->Y = &Y[0];
+    statorMesh->nElem = &nElem[0];
+    statorMesh->nNode = &nNode[0];
+    statorMesh->nLocalNode = 3;
+    //statorMesh->number = ??;
+    */
+   
+    femFullSystem* FullSystemStator = femFullSystemCreate(nElemDomain[0]); // créer un système de taille du nombre de noeud pour le maillage du stator (de numéro 0)
 
 
 
@@ -74,104 +89,119 @@ void motorComputeMagneticPotential(motor *theMotor)
             motorMeshLocal(theMesh, iTriangle, map, x, y); 
 
 
-            // 1.2 Calculer l'intégrale du sous-triangle avec la règle d'intégration de Hammer à un point
+            // 1.2 Calculer l'intégrale du sous-triangle avec la règle d'intégration 
+            // de Hammer à un point
             
-                // Effectuer l'intégrale sur le repère du parent
-                double xsi = 0.333333333333333;
-                double eta = 0.333333333333333;
-                double weight = 1;
+            // Effectuer l'intégrale sur le repère du parent
+            double xsi = 0.333333333333333;
+            double eta = 0.333333333333333;
+            double weight = 1.0;
 
-                // fonctions de forme dans le triangle parent
-                double* phi = malloc(sizeof(double) * 3); // car 3 sommets à chaque triangle
-                phi[0] = 1 - xsi - eta;   
-                phi[1] = xsi;
-                phi[2] = eta;             
+            // fonctions de forme dans le triangle parent
+            double* phi = malloc(sizeof(double) * 3); // car 3 sommets à chaque triangle
+            phi[0] = 1.0 - xsi - eta;   
+            phi[1] = xsi;
+            phi[2] = eta;      
+            //#femDiscretePhi2       
+            
+            // dérivées des fonctions de formes dans le triangle parent
+            double* dphidxsi = malloc(sizeof(double)*3);
+            double* dphideta = malloc(sizeof(double)*3);
+            dphidxsi[0] = -1.0;  
+            dphidxsi[1] =  1.0;
+            dphidxsi[2] =  0.0;
+            dphideta[0] = -1.0;  
+            dphideta[1] =  0.0;
+            dphideta[2] =  1.0;
+            //#femDiscreteDphi2(space,xsi,eta,dphidxsi,dphideta); 
 
-                // ARRIVE ICI
-
-                
-                // dérivées des fonctions de formes dans le triangle parent
-                double* dphidxsi = malloc(sizeof(double)*space->n);
-                double* dphideta = malloc(sizeof(double)*space->n);
-                femDiscreteDphi2(space,xsi,eta,dphidxsi,dphideta); // dphidxsi et dphideta ont été remplies
-
-
-                // calcul du gradient de la transformation
-                double dxdxsi = 0.0;                    double dydxsi = 0.0; 
-                double dxdeta = 0.0;                    double dydeta = 0.0;
-                
-                for(int i = 0; i < space->n ; i++)
-                {
-                    dxdxsi += x[i] * dphidxsi[i];           dydxsi += y[i] * dphidxsi[i];     
-                    dxdeta += x[i] * dphideta[i];           dydeta += y[i] * dphideta[i]; 
-                }
-                
-                // calcul du Jacobien de la transformation
-                double Jacobien = dxdxsi * dydeta - dxdeta * dydxsi;
-                if(Jacobien <0) // noeuds sont mal orientés => nécessité de réorienter les noeuds dans le maillage
-                {
-                    int node = mesh->elem[nLocalNode*iTriangle];
-                    mesh->elem[nLocalNode*iTriangle] = mesh->elem[nLocalNode*iTriangle+2];
-                    mesh->elem[nLocalNode*iTriangle + 2] = node;
-                }
-                Jacobien = fabs(Jacobien);
-
-                // calcul du gradient des fonctions de forme par interpolation des fonctions de formes
-                double* dphidx = malloc(sizeof(double) * space->n);
-                double* dphidy = malloc(sizeof(double) * space->n);
-                for (int i = 0; i < space->n; i++) 
-                {    
-                    dphidx[i] = (1 / Jacobien) * (dphidxsi[i] * dydeta - dphideta[i] * dydxsi) ;      
-                    dphidy[i] = (1 / Jacobien) * (dphideta[i] * dxdxsi - dphidxsi[i] * dxdeta) ; 
-                }       
-
-                // Assemblage des matrices locales dans la matrice globale
-                for (int i = 0; i < space->n; i++) 
-                { 
-                    B[map[i]] += (phi[i] * Jacobien) * weight;// Assemblage du vecteur B
-                    
-                    for( int j = 0; j < space->n; j++) // Assemblage de la matrice A
-                    {
-                        A[map[i]][map[j]] += dphidx[i] * dphidx[j] + dphidy[i] * dphidy[j] * Jacobien * weight;
-                    }
-                }
-                
-                free(dphidx);
-                free(dphidy);
-                free(dphidxsi);
-                free(dphideta);
-                free(phi);
+            // Interpolation par des fonctions de forme
+            // calcul du gradient de la transformation
+            double dxdxsi = 0.0;                    double dydxsi = 0.0; 
+            double dxdeta = 0.0;                    double dydeta = 0.0;
+            
+            for(int i = 0; i < 3 ; i++) 
+            {
+                dxdxsi += x[i] * dphidxsi[i];           dydxsi += y[i] * dphidxsi[i];     
+                dxdeta += x[i] * dphideta[i];           dydeta += y[i] * dphideta[i]; 
             }
+            
+            // calcul du Jacobien de la transformation
+            double Jacobien = dxdxsi * dydeta - dxdeta * dydxsi;
+            if(Jacobien <0) // noeuds sont mal orientés => nécessité de réorienter les noeuds dans le maillage
+            {
+                int node = elem[nLocalNode*iTriangle];
+                elem[nLocalNode*iTriangle] = elem[nLocalNode*iTriangle+2];
+                elem[nLocalNode*iTriangle + 2] = node;
+            }
+            Jacobien = fabs(Jacobien);
 
+            // calcul du gradient des fonctions de forme par interpolation des fonctions de formes
+            double* dphidx = malloc(sizeof(double) * 3);
+            double* dphidy = malloc(sizeof(double) * 3);
+            for (int i = 0; i < 3; i++) 
+            {    
+                dphidx[i] = (dphidxsi[i] * dydeta - dphideta[i] * dydxsi) / Jacobien ;      
+                dphidy[i] = (dphideta[i] * dxdxsi - dphidxsi[i] * dxdeta) / Jacobien ; 
+            }       
+
+            // Assemblage des matrices locales dans la matrice globale
+            for (int i = 0; i < 3; i++) 
+            { 
+                FullSystemStator->B[map[i]] += weight * Jacobien * phi[i];// Assemblage du vecteur B
+                
+                for( int j = 0; j < 3; j++) // Assemblage de la matrice A
+                {
+                    FullSystemStator->A[map[i]][map[j]] += weight * Jacobien * (dphidx[i] * dphidx[j] + dphidy[i] * dphidy[j]);
+                }
+            }
+                     
+            
+
+            free(map);
             free(x);
             free(y);
-            free(map);
-            }     
 
-            // Imposer la contrainte
-            femEdges* edges = theProblem->edges;
-            for (int iEdge = 0; iEdge < edges->nEdge; iEdge++) 
-            {      
-                femEdge* edge = &(edges->edges[iEdge]);
-                if (edge->elem[1] == -1) // détecter les frontières pour y imposer la condition limite
-                {  
-                    //imposer la contrainte
-                    double value = 0.0; // valeur de la condition limite
-                    for (int j = 0; j < 2; j++) 
-                    {
-                    femFullSystemConstrain(theProblem->system, edge->node[j] ,value);  
-                    }
-                }
-                    
-            }
+            free(phi);
+            free(dphidxsi);
+            free(dphideta);
 
-    femFullSystemEliminate(theProblem -> system);
+            free(dphidx);
+            free(dphidy);
 
+            
         }
     }
 
-    
 
+    // ARRIVER ICI : IMPOSER LA CONTRAINTE SUR LE RAYON EXTERIEUR DU STATOR
+
+
+    // Imposer la condition limite pour le stator: 
+    // potentiel nul sur son rayon extérieur
+    femEdges* edges = femEdgesCreate(theMesh);
+    for (int iEdge = 0; iEdge < edges->nEdge; iEdge++) 
+    {      
+        femEdge* edge = &(edges->edges[iEdge]);
+        if (edge->elem[1] == -1) // détecter les frontières pour y imposer la condition limite
+        {  
+            //imposer la contrainte
+            double value = 0.0; // valeur de la condition limite
+            for (int j = 0; j < 2; j++) 
+            {
+                femFullSystemConstrain(theProblem->system, edge->node[j] ,value);  
+            }
+        }
+            
+    }
+    
+    femFullSystemEliminate(FullSystemStator);
+    // modifier la valeur dans le tableau a
+
+
+
+    // Ne pas oublier tous les free !!!
+    femFullSystemFree(FullSystemStator);
     return;
 }
 
@@ -190,12 +220,10 @@ void motorComputeMagneticPotential(motor *theMotor)
  * -> le tableau y par les 3 ordonnées des noeuds constituant le ième sous-triangle
  */
 void motorMeshLocal(const motorMesh* theMesh, const int iElem, int *map, double *x, double *y)
-{
-    int nLocal = theMesh->nLocalNode;
-    
-    for (int j=0; j < nLocal; ++j) 
+{    
+    for (int j=0; j < 3; ++j) 
     {
-        map[j] = theMesh->elem[iElem*nLocal+j];
+        map[j] = theMesh->elem[iElem*3+j];
         x[j]   = theMesh->X[map[j]];
         y[j]   = theMesh->Y[map[j]]; 
     }   

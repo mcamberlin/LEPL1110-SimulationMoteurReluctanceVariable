@@ -6,5 +6,5 @@ C_FLAGS =
 
 C_DEFINES = -Dgraphic
 
-C_INCLUDES = -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/include" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/deps/glad/include" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/deps/glfw/include" 
+C_INCLUDES = -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/include" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/deps/glad/include" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/deps/glfw/include" 
 

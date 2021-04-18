@@ -6,5 +6,5 @@ C_FLAGS =   -std=gnu99
 
 C_DEFINES = 
 
-C_INCLUDES = -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/include" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/build/deps/bov/shaderIncludes" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/deps/glad/include" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/deps/glfw/include" 
+C_INCLUDES = -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/include" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/build/deps/bov/shaderIncludes" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/deps/glad/include" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/deps/glfw/include" 
 

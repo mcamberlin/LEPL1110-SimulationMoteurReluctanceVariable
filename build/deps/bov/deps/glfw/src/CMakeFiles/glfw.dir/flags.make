@@ -6,7 +6,7 @@ C_FLAGS = -fPIC   -Wall -std=gnu99
 
 C_DEFINES = -D_GLFW_USE_CONFIG_H
 
-C_INCLUDES = -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/deps/glfw/include" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/deps/glfw/src" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/build/deps/bov/deps/glfw/src" 
+C_INCLUDES = -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/deps/glfw/include" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/deps/glfw/src" -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/build/deps/bov/deps/glfw/src" 
 
 # Custom flags: deps/bov/deps/glfw/src/CMakeFiles/glfw.dir/context.c.o_FLAGS = -Wdeclaration-after-statement
 

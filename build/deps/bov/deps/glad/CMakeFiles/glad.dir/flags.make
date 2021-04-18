@@ -6,5 +6,5 @@ C_FLAGS =
 
 C_DEFINES = 
 
-C_INCLUDES = -I"/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/deps/glad/include" 
+C_INCLUDES = -I"/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/deps/glad/include" 
 

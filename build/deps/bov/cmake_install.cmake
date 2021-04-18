@@ -1,4 +1,4 @@
-# Install script for directory: /home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov
+# Install script for directory: /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -39,8 +39,8 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/build/deps/bov/deps/glfw/cmake_install.cmake")
-  include("/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/build/deps/bov/deps/glad/cmake_install.cmake")
+  include("/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/build/deps/bov/deps/glfw/cmake_install.cmake")
+  include("/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/build/deps/bov/deps/glad/cmake_install.cmake")
 
 endif()
 

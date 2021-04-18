@@ -6,8 +6,8 @@ deps/bov/CMakeFiles/bov.dir/src/BOV.c.o
  ../deps/bov/deps/glad/include/glad/glad.h
  ../deps/bov/deps/glfw/include/GLFW/glfw3.h
  ../deps/bov/include/BOV.h
- /home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/BOV.c
- /home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/big_font.h
+ /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/BOV.c
+ /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/big_font.h
  deps/bov/shaderIncludes/curve_geom.h
  deps/bov/shaderIncludes/default_frag.h
  deps/bov/shaderIncludes/default_vert.h

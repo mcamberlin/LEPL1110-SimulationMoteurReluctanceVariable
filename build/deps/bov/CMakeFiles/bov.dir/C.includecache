@@ -92,41 +92,41 @@ glad/glad.h
 GLFW/glfw3.h
 -
 
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/BOV.c
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/BOV.c
 BOV.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/BOV.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/BOV.h
 math.h
 -
 float.h
 -
 big_font.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/big_font.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/big_font.h
 points_vert.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/points_vert.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/points_vert.h
 points_geom.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/points_geom.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/points_geom.h
 points_frag.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/points_frag.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/points_frag.h
 lines_geom.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/lines_geom.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/lines_geom.h
 lines_frag.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/lines_frag.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/lines_frag.h
 curve_geom.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/curve_geom.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/curve_geom.h
 triangles_geom.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/triangles_geom.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/triangles_geom.h
 triangles_frag.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/triangles_frag.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/triangles_frag.h
 text_vert.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/text_vert.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/text_vert.h
 text_frag.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/text_frag.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/text_frag.h
 default_vert.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/default_vert.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/default_vert.h
 default_frag.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/default_frag.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/default_frag.h
 
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/src/big_font.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/src/big_font.h
 stddef.h
 -
 stdint.h

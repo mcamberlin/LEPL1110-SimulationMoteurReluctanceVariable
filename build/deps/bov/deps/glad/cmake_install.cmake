@@ -1,4 +1,4 @@
-# Install script for directory: /home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/deps/bov/deps/glad
+# Install script for directory: /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/deps/bov/deps/glad
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

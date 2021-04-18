@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/src/fem.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/fem.h
 stdio.h
 -
 stdlib.h
@@ -18,11 +18,11 @@ string.h
 assert.h
 -
 
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/src/motor.c
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.c
 motor.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/src/motor.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.h
 
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/src/motor.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.h
 fem.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/Devoirs/Projet/src/fem.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/fem.h
 

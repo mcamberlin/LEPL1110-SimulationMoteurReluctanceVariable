@@ -266,10 +266,11 @@ void motorComputeMagneticPotential(motor* theMotor)
     //statorMesh->number = ??;
     */
    
-    int nNodeStator = nElemDomain[0]*3;
-    femFullSystem* FullSystemStator = femFullSystemCreate(nNodeStator); // créer un système de taille du nombre de noeud pour le maillage du stator (de numéro 0)
-    printf("nNodeStator : %d \n", nNodeStator);
-
+    // Est-ce que le nombre de noeuds au stator est correct ?
+    int nNodeStator = nElemDomain[0]*3;     
+    femFullSystem* FullSystemStator = femFullSystemCreate(nNodeStator); 
+    // système de taille du nombre de noeud pour le maillage du stator (de numéro 0)
+    
     for(int iTriangle =0; iTriangle< nElem; iTriangle++)
     // Parcourir tous les triangles des maillages
     {
@@ -285,15 +286,15 @@ void motorComputeMagneticPotential(motor* theMotor)
         else if(strcmp( nameDomain[domain[iTriangle]], "Stator_core") == 0) 
         // Résoudre l'équation de Poisson dans le stator
         {
-            // 1. Construire le système linéaire = assembler les matrices locales
+            // Construire le système linéaire = assembler les matrices locales
 
-            // 1.1. Récupérer les numéros et coordonnées des noeuds du sous-triangle courant 
+            // Récupérer les numéros et coordonnées des noeuds du sous-triangle courant 
             int* map = malloc(sizeof(int) * nLocalNode); if(map == NULL) {Error("Error malloc map in motorComputeMagneticPotential");}
             double* x = malloc(sizeof(double) * nLocalNode); if(map == NULL) {Error("Error malloc x in motorComputeMagneticPotential");}
             double* y = malloc(sizeof(double) * nLocalNode); if(map == NULL) {Error("Error malloc y in motorComputeMagneticPotential");}
             motorMeshLocal(theMesh, iTriangle, map, x, y); 
 
-            // 1.2 Calculer l'intégrale du sous-triangle avec la règle d'intégration 
+            // Calculer l'intégrale du sous-triangle avec la règle d'intégration 
             // de Hammer à un point
             
             // Effectuer l'intégrale sur le repère du parent
@@ -321,15 +322,11 @@ void motorComputeMagneticPotential(motor* theMotor)
             
 
             // Interpolation par des fonctions de forme
-            // calcul du gradient de la transformation
-            double dxdxsi = 0.0;                    double dydxsi = 0.0; 
-            double dxdeta = 0.0;                    double dydeta = 0.0;
-            
-            for(int i = 0; i < 3 ; i++) 
-            {
-                dxdxsi += x[i] * dphidxsi[i];           dydxsi += y[i] * dphidxsi[i];     
-                dxdeta += x[i] * dphideta[i];           dydeta += y[i] * dphideta[i]; 
-            }
+            // calcul du gradient de la transformation           
+            double dxdxsi = x[0] * dphidxsi[0] + x[1] * dphidxsi[1] + x[2] * dphidxsi[2];
+            double dxdeta = x[0] * dphideta[0] + x[1] * dphideta[1] + x[2] * dphideta[2];
+            double dydxsi = y[0] * dphidxsi[0] + y[1] * dphidxsi[1] + y[2] * dphidxsi[2];
+            double dydeta = y[0] * dphideta[0] + y[1] * dphideta[1] + y[2] * dphideta[2]; 
             
             
             // calcul du Jacobien de la transformation
@@ -382,41 +379,25 @@ void motorComputeMagneticPotential(motor* theMotor)
         }
     }
 
-
-    // ARRIVER ICI : IMPOSER LA CONTRAINTE SUR LE RAYON EXTERIEUR DU STATOR
-
     // Imposer la condition limite pour le stator: 
     // potentiel nul sur son rayon extérieur
 
-    // Déterminer la valeur du rayon extérieur
-    double rayonExt = 0.0;
     double rayon = 0.0;
     int nb = 0;
-    for(int i=0; i< theMesh->nElemDomain[0]; i++)
-    //Parcourir chaque noeud du stator et calculer son rayon
-    {
-        rayon = sqrt( X[i]*X[i] + Y[i]*Y[i] );
-        //printf("Rayon : %f \n", rayon);
-
-        if( rayon >= rayonExt)
-        {
-            nb++;
-            rayonExt = rayon;
-        }
-    }
-    printf("Rayon extérieur : %f \n", rayonExt);
-    printf("Nombre de noeuds sur le rayon extérieur : %d \n", nb);
-
+    
     // Imposer une valeur nulle pour les noeuds situés sur le rayon extérieur.
-    for(int i=0; i< theMesh->nElemDomain[0]; i++)
+    for(int i=0; i< nNode; i++)
     //Parcourir chaque noeud du stator et calculer son rayon
     {
         rayon = sqrt( X[i]*X[i] + Y[i]*Y[i] );
-        if( rayon == rayonExt)
+        if( rayon >= theMotor->L - 0.001) // une certaine tolérance est acceptée pour prendre en considération les erreurs d'arrondi numérique.
         {
-            a[elem[i]] = 0.0; 
+            a[i] = 0.0; 
+            nb++;
         }
     }
+    //printf("Nombre de noeuds sur le rayon extérieur du moteur  : %d (attendu: 18, pour le maillage motor400.txt)\n", nb);
+
 
     /*
     femEdges* edges = femEdgesCreate(theMesh);

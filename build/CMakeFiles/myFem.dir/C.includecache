@@ -6,6 +6,10 @@
 
 #IncludeRegexTransform: 
 
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/fem.c
+fem.h
+/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/fem.h
+
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/fem.h
 stdio.h
 -

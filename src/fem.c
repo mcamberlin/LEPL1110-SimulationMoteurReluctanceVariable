@@ -129,39 +129,6 @@ void femDiscreteDphi2(femDiscrete* mySpace, double xsi, double eta, double *dphi
     mySpace->dphi2dx(xsi,eta,dphidxsi,dphideta);
 }
 
-void femDiscretePrint(femDiscrete *mySpace)
-{
-    int i,j;
-    int n = mySpace->n;
-    double xsi[4], eta[4], phi[4], dphidxsi[4], dphideta[4];
-    
-    femDiscreteXsi2(mySpace,xsi,eta);
-    for (i=0; i < n; i++) {
-        
-        femDiscretePhi2(mySpace,xsi[i],eta[i],phi);
-        femDiscreteDphi2(mySpace,xsi[i],eta[i],dphidxsi,dphideta);
-
-        for (j=0; j < n; j++)  {
-            printf("(xsi=%+.1f,eta=%+.1f) : ",xsi[i],eta[i]);
-            printf(" phi(%d)=%+.1f",j,phi[j]);  
-            printf("   dphidxsi(%d)=%+.1f",j,dphidxsi[j]);  
-            printf("   dphideta(%d)=%+.1f \n",j,dphideta[j]);  }
-        printf(" \n"); }
-}
-
-/** femMeshLocal
- * @in 
- * - const femMesh* theMesh = maillage considéré
- * - const int iElem = indice du ième sous-triangle considéré
- * - int* map = pointeur vers un tableau de 3 éléments préalablement alloué
- * - double* x = pointeur vers un tableau de 3 éléments préalablement alloué
- * - double* y = pointeur vers un tableau de 3 éléments préalablement alloué
- * @out 
- * rempli:
- * -> le tableau map par les 3 numéros des noeuds constituant le ième sous-triangle
- * -> le tableau x par les 3 abscisses des noeuds constituant le ième sous-triangle
- * -> le tableau y par les 3 ordonnées des noeuds constituant le ième sous-triangle
- */
 void femMeshLocal(const femMesh *theMesh, const int iElem, int *map, double *x, double *y)
 {
     int j,nLocal = theMesh->nLocalNode;

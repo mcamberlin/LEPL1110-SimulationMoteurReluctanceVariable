@@ -25,19 +25,25 @@ femMesh* motorMeshToFemMeshConverter(const motorMesh* theMotorMesh)
     {
         theFemMesh->number[i] = i; 
     } 
+    return theFemMesh;
 }
 
-void printFemMesh(femMesh* theFemMesh)
+void freeFemMeshConverted(femMesh* theFemMesh)
+{
+    free(theFemMesh->number);
+    free(theFemMesh);
+}
+
+void printFemMesh(const femMesh* theFemMesh)
 {
     int max = 10;
     printf("\n ====== femMesh informations ============================\n");
     printf("    elem = [ ");
-    for(int i =0 ;i < max; i++)
+    for(int i =0; i < max; i++)
     {
-        printf("%d, ",theFemMesh->elem[i]); // PROBLEME ICI
+        printf("%d, ",theFemMesh->elem[i]); 
     }
     printf("... ]\n");
-
 
     printf("    X = [ ");
     for(int i =0 ;i < max; i++)
@@ -66,6 +72,30 @@ void printFemMesh(femMesh* theFemMesh)
 
 }
 
+/** femMeshLocal
+ * @in 
+ * - const femMesh* theMesh = maillage considéré
+ * - const int iElem = indice du ième sous-triangle considéré
+ * - int* map = pointeur vers un tableau de 3 éléments préalablement alloué
+ * - double* x = pointeur vers un tableau de 3 éléments préalablement alloué
+ * - double* y = pointeur vers un tableau de 3 éléments préalablement alloué
+ * @out 
+ * rempli:
+ * -> le tableau map par les 3 numéros des noeuds constituant le ième sous-triangle
+ * -> le tableau x par les 3 abscisses des noeuds constituant le ième sous-triangle
+ * -> le tableau y par les 3 ordonnées des noeuds constituant le ième sous-triangle
+ */
+void myFemMeshLocal(const femMesh *theMesh, const int iElem, int *map, double *x, double *y)
+{
+    int j,nLocal = theMesh->nLocalNode;
+    
+    for (j=0; j < nLocal; ++j) 
+    {
+        map[j] = theMesh->elem[iElem*nLocal+j];
+        x[j]   = theMesh->X[map[j]];
+        y[j]   = theMesh->Y[map[j]]; 
+    }   
+}
 
 //
 // ========= Projet à réaliser ===================
@@ -116,13 +146,7 @@ void motorComputeMagneticPotential(motor* theMotor)
     int nTriangles = theMotorMesh->nElem;
 
     femMesh* theFemMesh = motorMeshToFemMeshConverter(theMotorMesh);
-    
-    printFemMesh(theFemMesh);
-
     femEdges* theEdges = femEdgesCreate(theFemMesh);
-
-    printf("debug\n");
-
     femFullSystem* theSystem = femFullSystemCreate(theFemMesh->nNode);
     femIntegration* theRule = femIntegrationCreate(3,FEM_TRIANGLE); // règle d'intégration de Hammer à 3 points
     femDiscrete* theSpace = femDiscreteCreate(3,FEM_TRIANGLE); // élément triangulaire bilinéaire
@@ -134,7 +158,7 @@ void motorComputeMagneticPotential(motor* theMotor)
     
     for (iTriangle = 0; iTriangle < nTriangles; iTriangle++) 
     {
-        femMeshLocal(theFemMesh, iTriangle, map, x, y); 
+        myFemMeshLocal(theFemMesh, iTriangle, map, x, y); 
 
         for (iInteg = 0; iInteg < theRule->n; iInteg++) 
         {    
@@ -188,6 +212,9 @@ void motorComputeMagneticPotential(motor* theMotor)
     }
 
     femFullSystemEliminate(theSystem);
+
+
+    freeFemMeshConverted(theFemMesh);
 } 
 
 //

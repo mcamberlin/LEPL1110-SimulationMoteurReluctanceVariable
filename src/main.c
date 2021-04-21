@@ -56,17 +56,19 @@ int main(void)
 
         double theTime = (glfwGetTime() - theStartingTime) * 5;   
         
-        //  Pour ne pas figer le resultat a un temps, decommenter la ligne ci-dessous       
+        //  Pour ne pas figer le resultat a un temps, commenter la ligne ci-dessous       
         if (theTime >= theStop) theTime = theStop;
 
          
         if (action == 'K') thePlotMode = 0;
         if (action == 'S') thePlotMode = 1;
         
-        if (action == 'R') {
+        if (action == 'R') 
+        {
             theStartingTime = glfwGetTime(); 
             theDiscreteTime = 0;
-            theStop = 1;}
+            theStop = 1;
+        }
         
         glfemSetColorLine(GLFEM_BLACK);
         glfemSetColor(GLFEM_BACKGROUND);
@@ -328,7 +330,6 @@ void motorMeshWrite(const motorMesh *theMesh, const char *filename)
     
     fclose(file);
 }
-
 
 femMesh *motorDomainCreate(const motorMesh *theMotorMesh, int iDomain)
 {

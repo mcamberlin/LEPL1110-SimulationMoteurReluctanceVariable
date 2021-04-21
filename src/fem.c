@@ -568,7 +568,8 @@ double* femFullSystemEliminate(femFullSystem *mySystem)
     
     /* Gauss elimination */
     
-    for (k=0; k < size; k++) {
+    for (k=0; k < size; k++) 
+    {
         if ( fabs(A[k][k]) <= 1e-8 ) {
             printf("Pivot index %d  ",k);
             printf("Pivot value %e  ",A[k][k]);

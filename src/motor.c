@@ -140,10 +140,11 @@ void motorComputeCurrent(motor *theMotor)
 void motorComputeMagneticPotential(motor* theMotor)
 {
     motorMesh* theMotorMesh = theMotor->mesh;
-    double* a = theMotor->a;
     double* js = theMotor->js;
     double* mu = theMotor->mu;
+    int* domain = theMotorMesh->domain;
     int nTriangles = theMotorMesh->nElem;
+    int nNode = theMotorMesh->nNode;
 
     femMesh* theFemMesh = motorMeshToFemMeshConverter(theMotorMesh);
     femEdges* theEdges = femEdgesCreate(theFemMesh);
@@ -188,13 +189,14 @@ void motorComputeMagneticPotential(motor* theMotor)
             { 
                 for(j = 0; j < theSpace->n; j++) 
                 {
-                    theSystem->A[map[i]][map[j]] += (dphidx[i] * dphidx[j] 
-                                                   + dphidy[i] * dphidy[j]) * jac * weight; // CHANGEMENT NECESSAIRES ?
+                    theSystem->A[map[i]][map[j]] += (1.0 / mu[domain[iTriangle]]) * (dphidx[i] * dphidx[j] + dphidy[i] * dphidy[j]) * jac * weight; 
+                    // La permabilité dépend des sous-domaines. Il faut donc d'abord déterminer à quel sous-domain appartient le ième triangle (iTriangle).
+                    // Il faut ensuite diviser par sa perméabilité pour correspondre avec l'équation à résoudre 
                 }
             }                                                                                            
             for (i = 0; i < theSpace->n; i++) 
             {
-                theSystem->B[map[i]] += phi[i] * jac *weight; // changement nécessaires
+                theSystem->B[map[i]] += js[domain[iTriangle]] * phi[i] * jac * weight; // changement nécessaires
             }
         }
     } 
@@ -212,7 +214,7 @@ void motorComputeMagneticPotential(motor* theMotor)
     }
 
     femFullSystemEliminate(theSystem);
-
+    theMotor->a = theSystem->B;
 
     freeFemMeshConverted(theFemMesh);
 } 

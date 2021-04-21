@@ -149,6 +149,19 @@ void femDiscretePrint(femDiscrete *mySpace)
         printf(" \n"); }
 }
 
+/** femMeshLocal
+ * @in 
+ * - const femMesh* theMesh = maillage considéré
+ * - const int iElem = indice du ième sous-triangle considéré
+ * - int* map = pointeur vers un tableau de 3 éléments préalablement alloué
+ * - double* x = pointeur vers un tableau de 3 éléments préalablement alloué
+ * - double* y = pointeur vers un tableau de 3 éléments préalablement alloué
+ * @out 
+ * rempli:
+ * -> le tableau map par les 3 numéros des noeuds constituant le ième sous-triangle
+ * -> le tableau x par les 3 abscisses des noeuds constituant le ième sous-triangle
+ * -> le tableau y par les 3 ordonnées des noeuds constituant le ième sous-triangle
+ */
 void femMeshLocal(const femMesh *theMesh, const int iElem, int *map, double *x, double *y)
 {
     int j,nLocal = theMesh->nLocalNode;
@@ -289,7 +302,13 @@ int femMeshComputeBand(femMesh *theMesh)
         if (myBand < (myMax - myMin)) myBand = myMax - myMin; }         
     return(++myBand);
 }
-                                                                                                        
+
+/** femEdgesCreate
+ * @in 
+ * - femMesh *theMesh = maillage du moteur
+ * @out 
+ * 
+ */                                                                                              
 femEdges *femEdgesCreate(femMesh *theMesh)
 {
     femEdges *theEdges = malloc(sizeof(femEdges));

@@ -13,6 +13,7 @@
  */
 femMesh* motorMeshToFemMeshConverter(const motorMesh* theMotorMesh)
 {
+    
     femMesh* theFemMesh = malloc(sizeof(femMesh));
     theFemMesh->elem = theMotorMesh->elem;
     theFemMesh->X = theMotorMesh->X;
@@ -36,24 +37,25 @@ void freeFemMeshConverted(femMesh* theFemMesh)
 
 void printFemMesh(const femMesh* theFemMesh)
 {
-    int max = 10;
+    int start = 0;
+    int stop = 10;
     printf("\n ====== femMesh informations ============================\n");
     printf("    elem = [ ");
-    for(int i =0; i < max; i++)
+    for(int i = start; i < stop; i++)
     {
         printf("%d, ",theFemMesh->elem[i]); 
     }
     printf("... ]\n");
 
     printf("    X = [ ");
-    for(int i =0 ;i < max; i++)
+    for(int i = start ;i < stop; i++)
     {
         printf("%f, ",theFemMesh->X[i]);
     }
     printf("... ]\n");
 
     printf("    Y = [ ");
-    for(int i =0 ;i < max; i++)
+    for(int i = start ;i < stop; i++)
     {
         printf("%f, ",theFemMesh->Y[i]);
     }
@@ -63,7 +65,7 @@ void printFemMesh(const femMesh* theFemMesh)
     printf("    Number of local nodes        : %d\n",theFemMesh->nLocalNode); 
         
     printf("    number = [ ");
-    for(int i =0 ;i < max; i++)
+    for(int i = start ;i < stop; i++)
     {
         printf("%d, ",theFemMesh->number[i]);
     }
@@ -103,30 +105,32 @@ void myFemMeshLocal(const femMesh *theMesh, const int iElem, int *map, double *x
 
 void motorAdaptMesh(motor *theMotor, double delta)
 {
+    
     motorMesh *theMesh = theMotor->mesh;
     
     double x,y;
-    for(int i = 0; i < theMesh->nNode; ++i){
-        if  (theMotor->movingNodes[i] == 1){
+    for(int i = 0; i < theMesh->nNode; ++i)
+    {
+        if  (theMotor->movingNodes[i] == 1)
+        {
             x = theMesh->X[i]*cos(delta) - theMesh->Y[i]*sin(delta);
             y = theMesh->X[i]*sin(delta) + theMesh->Y[i]*cos(delta);
             theMesh->X[i] = x;
-            theMesh->Y[i] = y; }}
+            theMesh->Y[i] = y; 
+        }
+    }
     theMotor->theta += delta;
 }
 
 double motorComputeCouple(motor *theMotor)
 {
-    return 0.0;
-
+    return 1e-8;
 }
 
 void motorComputeCurrent(motor *theMotor)
 {
-    return;
+    return;   
 }
-
-
 
 /** motorComputeMagneticPotential
  * @in 
@@ -148,7 +152,7 @@ void motorComputeMagneticPotential(motor* theMotor)
 
     femMesh* theFemMesh = motorMeshToFemMeshConverter(theMotorMesh);
     femEdges* theEdges = femEdgesCreate(theFemMesh);
-    femFullSystem* theSystem = femFullSystemCreate(theFemMesh->nNode);
+    femFullSystem* theSystem = femFullSystemCreate(nNode);
     femIntegration* theRule = femIntegrationCreate(3,FEM_TRIANGLE); // règle d'intégration de Hammer à 3 points
     femDiscrete* theSpace = femDiscreteCreate(3,FEM_TRIANGLE); // élément triangulaire bilinéaire
 
@@ -196,7 +200,7 @@ void motorComputeMagneticPotential(motor* theMotor)
             }                                                                                            
             for (i = 0; i < theSpace->n; i++) 
             {
-                theSystem->B[map[i]] += js[domain[iTriangle]] * phi[i] * jac * weight; // changement nécessaires
+                theSystem->B[map[i]] += js[domain[iTriangle]] * phi[i] * jac * weight; 
             }
         }
     } 
@@ -222,3 +226,6 @@ void motorComputeMagneticPotential(motor* theMotor)
 //
 // ========= Projet à réaliser ===================
 //
+
+// Pistes d'améliorations:
+// Enlever du number dans la fonction motorMeshToFemMeshConverter

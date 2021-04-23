@@ -1,2 +1,11 @@
 deps/*
 build/*
+*.log
+*.o
+*.cmake
+build/CMakeFiles/CMakeError.log
+build/CMakeFiles/CMakeOutput.log
+build/CMakeFiles/Makefile.cmake
+build/CMakeFiles/myFem.dir/C.includecache
+build/CMakeFiles/myFem.dir/src/main.c.o
+build/CMakeFiles/myFem.dir/src/motor.c.o

@@ -105,18 +105,16 @@ void myFemMeshLocal(const femMesh *theMesh, const int iElem, int *map, double *x
 
 void motorAdaptMesh(motor *theMotor, double delta)
 {
-    
-    motorMesh *theMesh = theMotor->mesh;
-    
+    motorMesh *theMotorMesh = theMotor->mesh;   
     double x,y;
-    for(int i = 0; i < theMesh->nNode; ++i)
+    for(int i = 0; i < theMotorMesh->nNode; ++i)
     {
         if  (theMotor->movingNodes[i] == 1)
         {
-            x = theMesh->X[i]*cos(delta) - theMesh->Y[i]*sin(delta);
-            y = theMesh->X[i]*sin(delta) + theMesh->Y[i]*cos(delta);
-            theMesh->X[i] = x;
-            theMesh->Y[i] = y; 
+            x = theMotorMesh->X[i]*cos(delta) - theMotorMesh->Y[i]*sin(delta);
+            y = theMotorMesh->X[i]*sin(delta) + theMotorMesh->Y[i]*cos(delta);   
+            theMotorMesh->X[i] = x;
+            theMotorMesh->Y[i] = y; 
         }
     }
     theMotor->theta += delta;

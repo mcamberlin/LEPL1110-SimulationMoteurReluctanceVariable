@@ -109,39 +109,34 @@ int main(void)
             glfemPlotSolution(theStator,theMotor->a); 
         }
             
-//
-// Calcul d'une itération temporelle 
-// C'est ici qu'on exécute le projet :-)
-//
-//   Calcul du potentiel magnétique A
-//   Calcul du couple
-//   Calcul de omega par l'équation de Newton
-//   Rotation du rotor et remaillage de la bande glissante
-//   Mise a jour des courants dans les inducteurs en fonction de l'angle
-//
             
         if (theTime > theDiscreteTime) 
         {
             theIteration += 1;
             theDiscreteTime += theTimeStep; 
 
+            //   Calcul du potentiel magnétique A
             motorComputeMagneticPotential(theMotor);
-
+            
+            //   Calcul du couple
             double C = motorComputeCouple(theMotor);
 
+            //   Calcul de omega par l'équation de Newton
             omega += C * theTimeStep / theMotor->inertia;
             theMotor->omega = omega;
-
+            
+            //   Rotation du rotor et remaillage de la bande glissante
             motorAdaptMesh(theMotor,omega*theTimeStep);
 
+            //   Mise a jour des courants dans les inducteurs en fonction de l'angle
             motorComputeCurrent(theMotor);
 
-            printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); }
-            sprintf(theMessage,"Time = %.2f iteration = %d",theDiscreteTime,theIteration);
-
-
-         sprintf(theMessage, "Entrefer ");
-         glfemDrawMessage(theMessage,(double[2]){16.0, 30.0}); 
+            printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); 
+        }
+        
+        sprintf(theMessage,"Time = %.2f iteration = %d",theDiscreteTime,theIteration);
+        sprintf(theMessage, "Entrefer ");
+        glfemDrawMessage(theMessage,(double[2]){16.0, 30.0}); 
         
     } while(!glfemWindowShouldClose());
     
@@ -218,8 +213,7 @@ motorMesh *motorMeshRead(const char *filename)
     
     fclose(file);
     return theMesh;
-}  
-
+} 
 motor *motorCreate(motorMesh *theMesh)
 {
     motor *theMotor = malloc(sizeof(motor));
@@ -238,6 +232,7 @@ motor *motorCreate(motorMesh *theMesh)
     {
         int domain = theMesh->domain[i];
         if (domain == 8 || domain == 9 || domain == 10 ) 
+        //Rotor_core, Rotor_air, Rotor_gap
         {
             int *elem = &(theMesh->elem[i*3]);
             for (int j=0; j < 3; j++) 

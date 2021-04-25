@@ -1,5 +1,7 @@
 #include "motor.h"
 
+static motorMesh* theGlobalMotorMesh;
+
 typedef enum 
 {
     Stator_core = 0,
@@ -16,161 +18,11 @@ typedef enum
     Rotor_air = 9
 } iDomain;
 
-static motorMesh* theGlobalMotorMesh;
-
-//
-// ========= Fonctions utiles ===================
-//
-
-/** motorMeshToFemMeshConverter
- * @in 
- * - const motorMesh* theMesh = ensemble des maillages du moteur considéré
- * @out 
- * - femMesh* = structure femMesh* contenant les mêmes attributs que ceux dans motorMesh 
- * (à l'exception de ceux liés aux sous-domaines). 
- */
-femMesh* motorMeshToFemMeshConverter(const motorMesh* theMotorMesh)
-{
-    
-    femMesh* theFemMesh = malloc(sizeof(femMesh));
-    theFemMesh->elem = theMotorMesh->elem;
-    theFemMesh->X = theMotorMesh->X;
-    theFemMesh->Y = theMotorMesh->Y;
-    theFemMesh->nElem = theMotorMesh->nElem;
-    theFemMesh->nNode = theMotorMesh->nNode;
-    theFemMesh->nLocalNode = theMotorMesh->nLocalNode;
-    theFemMesh->number = malloc(sizeof(int)*theFemMesh->nNode); //Utilisé pour la renumérotation des noeuds dans le maillage 
-    for (int i = 0; i < theFemMesh->nNode; i++)
-    {
-        theFemMesh->number[i] = i; 
-    } 
-    return theFemMesh;
-}
-
-void freeFemMeshConverted(femMesh* theFemMesh)
-{
-    free(theFemMesh->number);
-    free(theFemMesh);
-}
-
-/** femMeshLocal
- * @in 
- * - const femMesh* theMesh = maillage considéré
- * - const int iElem = indice du ième sous-triangle considéré
- * - int* map = pointeur vers un tableau de 3 éléments préalablement alloué
- * - double* x = pointeur vers un tableau de 3 éléments préalablement alloué
- * - double* y = pointeur vers un tableau de 3 éléments préalablement alloué
- * @out 
- * rempli:
- * -> le tableau map par les 3 numéros des noeuds constituant le ième sous-triangle
- * -> le tableau x par les 3 abscisses des noeuds constituant le ième sous-triangle
- * -> le tableau y par les 3 ordonnées des noeuds constituant le ième sous-triangle
- */
-void myFemMeshLocal(const femMesh *theMesh, const int iElem, int *map, double *x, double *y)
-{
-    int j,nLocal = theMesh->nLocalNode;
-    
-    for (j=0; j < nLocal; ++j) 
-    {
-        map[j] = theMesh->elem[iElem*nLocal+j];
-        x[j]   = theMesh->X[map[j]];
-        y[j]   = theMesh->Y[map[j]]; 
-    }   
-}
-
-int startAirGap(const motorMesh* theMotorMesh)
-{
-    int start = 0;
-    for(int i=0; i< Air_gap; i++)
-    {
-        start += theMotorMesh->nElemDomain[i];
-    }
-    return start; 
-}
-
-int endAirGap(const motorMesh* theMotorMesh)
-{
-    return startAirGap(theMotorMesh) + theMotorMesh->nElemDomain[Air_gap];    
-}
-
-/** haveCommonEdge
- * @in 
- * - const motorMesh* theMotorMesh = ensemble des maillages du moteur considéré
- * - const int iTriangle1 = numéro du 1er triangle à considérer
- * - const int iTriangle1 = numéro du 2eme triangle à considérer
- * @out 
- * - retourne un tableau des 2 noeuds formant l'arête commune si elle existe
- * - retourne NULL sinon
- */
-int* haveCommonEdge(const motorMesh* theMotorMesh, const int iTriangle1, const int iTriangle2)
-{
-    int* rslt = malloc( sizeof(int) *2);
-    rslt[0] = -1; rslt[1] = -1;
-
-    int* elem = theMotorMesh->elem;
-    for(int i1 = 0; i1<3; i1++)
-    {
-        for(int i2 = 0; i2<3; i2++)
-        {
-            if(iTriangle1 == 706)
-            {
-                if(elem[iTriangle1*3 + i1] == elem[iTriangle2*3 + i2])
-                {
-                    if(rslt[0] == -1)
-                    {
-                        rslt[0] = elem[iTriangle1*3 + i1];
-                    }
-                    else
-                    {
-                        int tmp = rslt[0];
-                        rslt[0] = fmin(tmp,elem[iTriangle1*3 + i1]);
-                        rslt[1] = fmax(tmp, elem[iTriangle1*3 + i1]);
-                        return rslt;
-                    }
-                }
-            }
-        }
-
-    }
-    return rslt; // aucune edge commune trouvée
-}
-
-double distanceBetweenNodes(const motorMesh* theMotorMesh, const int node1, const int node2)
-{
-    double* X = theMotorMesh->X;
-    double* Y = theMotorMesh->Y;
-    int* elem = theMotorMesh->elem;
-
-    double x1 = X[elem[node1]];
-    double y1 = Y[elem[node1]];
-
-    double x2 = X[elem[node2]];
-    double y2 = Y[elem[node2]];
-
-    return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
-}
-
-double radius(const motorMesh* theMotorMesh, const int node)
-{
-    double x = theMotorMesh->X[node];
-    double y = theMotorMesh->Y[node];
-    return sqrt(x*x + y*y);
-}
-
-double angle(const int node)
-{
-    double* X  = theGlobalMotorMesh->X;
-    double* Y = theGlobalMotorMesh->Y;
-    int* elem = theGlobalMotorMesh->elem;
-
-    return atan2(Y[elem[node]], X[elem[node]]);
-}
-
 void printFemMesh(const femMesh* theFemMesh)
 {
     int start = 0;
     int stop = 10;
-    printf("\n ====== femMesh informations ============================\n");
+    printf("\n ====== femMesh information ============================\n");
     printf("    elem = [ ");
     for(int i = start; i < stop; i++)
     {
@@ -219,23 +71,205 @@ void printTriangle(const motorMesh* theMotorMesh, const int iTriangle)
     printf("\n");    
 }   
 
-
-/**
- * selon l'angle
-*/
-int compareTo (const void * this, const void * that)
+void printDoubleArray(const char* name, const double* ptr)
 {
-    int* thisInt = (int*) this;
-    int* thatInt = (int*) that;
-
-    int thisNode = *(thisInt);
-    int thatNode = *(thatInt);
-
-    double angleThis = angle(thisNode);
-    double angleThat = angle(thatNode);
-
-    return angleThis - angleThat;
+    int start = 0;
+    int stop = 10;
+    printf("\n ==================================\n");
+    printf(" %s = [ ", name);
+    for(int i = start; i < stop; i++)
+    {
+        printf("%f, ",ptr[i]); 
+    }
+    printf("... ]\n");
 }
+
+void printIntArray(const char* name, const int* ptr)
+{
+    int start = 0;
+    int stop = 10;
+    printf("\n ==================================\n");
+    printf(" %s = [ ", name);
+    for(int i = start; i < stop; i++)
+    {
+        printf("%d, ",ptr[i]); 
+    }
+    printf("... ]\n");
+}
+//    
+// ========= Fonctions utiles motorComputeMagneticPotential() ===================
+//
+    /** motorMeshToFemMeshConverter
+     * @in 
+     * - const motorMesh* theMesh = ensemble des maillages du moteur considéré
+     * @out 
+     * - femMesh* = structure femMesh* contenant les mêmes attributs que ceux dans motorMesh 
+     * (à l'exception de ceux liés aux sous-domaines). 
+     */
+    femMesh* motorMeshToFemMeshConverter(const motorMesh* theMotorMesh)
+    {
+        
+        femMesh* theFemMesh = malloc(sizeof(femMesh));
+        theFemMesh->elem = theMotorMesh->elem;
+        theFemMesh->X = theMotorMesh->X;
+        theFemMesh->Y = theMotorMesh->Y;
+        theFemMesh->nElem = theMotorMesh->nElem;
+        theFemMesh->nNode = theMotorMesh->nNode;
+        theFemMesh->nLocalNode = theMotorMesh->nLocalNode;
+        theFemMesh->number = malloc(sizeof(int)*theFemMesh->nNode); //Utilisé pour la renumérotation des noeuds dans le maillage 
+        for (int i = 0; i < theFemMesh->nNode; i++)
+        {
+            theFemMesh->number[i] = i; 
+        } 
+        return theFemMesh;
+    }
+
+    void freeFemMeshConverted(femMesh* theFemMesh)
+    {
+        free(theFemMesh->number);
+        free(theFemMesh);
+    }
+
+    /** femMeshLocal
+     * @in 
+     * - const femMesh* theMesh = maillage considéré
+     * - const int iElem = indice du ième sous-triangle considéré
+     * - int* map = pointeur vers un tableau de 3 éléments préalablement alloué
+     * - double* x = pointeur vers un tableau de 3 éléments préalablement alloué
+     * - double* y = pointeur vers un tableau de 3 éléments préalablement alloué
+     * @out 
+     * rempli:
+     * -> le tableau map par les 3 numéros des noeuds constituant le ième sous-triangle
+     * -> le tableau x par les 3 abscisses des noeuds constituant le ième sous-triangle
+     * -> le tableau y par les 3 ordonnées des noeuds constituant le ième sous-triangle
+     */
+    void myFemMeshLocal(const femMesh *theMesh, const int iElem, int *map, double *x, double *y)
+    {
+        int j,nLocal = theMesh->nLocalNode;
+        
+        for (j=0; j < nLocal; ++j) 
+        {
+            map[j] = theMesh->elem[iElem*nLocal+j];
+            x[j]   = theMesh->X[map[j]];
+            y[j]   = theMesh->Y[map[j]]; 
+        }   
+    }
+
+//
+// ========= Fonctions utiles motorAdaptMesh() ===================
+//
+
+    /** haveCommonEdge
+     * @in 
+     * - const motorMesh* theMotorMesh = ensemble des maillages du moteur considéré
+     * - const int iTriangle1 = numéro du 1er triangle à considérer
+     * - const int iTriangle1 = numéro du 2eme triangle à considérer
+     * @out 
+     * - retourne un tableau des 2 noeuds formant l'arête commune si elle existe
+     * - retourne NULL sinon
+     */
+    int* haveCommonEdge(const motorMesh* theMotorMesh, const int iTriangle1, const int iTriangle2)
+    {
+        int* rslt = malloc( sizeof(int) *2);
+        rslt[0] = -1; rslt[1] = -1;
+
+        int* elem = theMotorMesh->elem;
+        for(int i1 = 0; i1<3; i1++)
+        {
+            for(int i2 = 0; i2<3; i2++)
+            {
+                if(iTriangle1 == 706)
+                {
+                    if(elem[iTriangle1*3 + i1] == elem[iTriangle2*3 + i2])
+                    {
+                        if(rslt[0] == -1)
+                        {
+                            rslt[0] = elem[iTriangle1*3 + i1];
+                        }
+                        else
+                        {
+                            int tmp = rslt[0];
+                            rslt[0] = fmin(tmp,elem[iTriangle1*3 + i1]);
+                            rslt[1] = fmax(tmp, elem[iTriangle1*3 + i1]);
+                            return rslt;
+                        }
+                    }
+                }
+            }
+
+        }
+        return rslt; // aucune edge commune trouvée
+    }
+
+    int startAirGap()
+    {
+        int start = 0;
+        for(int i=0; i< Air_gap; i++)
+        {
+            start += theGlobalMotorMesh->nElemDomain[i];
+        }
+        return start; 
+    }
+
+    int endAirGap()
+    {
+        return startAirGap() + theGlobalMotorMesh->nElemDomain[Air_gap];    
+    }
+
+    double radius(const int node)
+    {
+        double x = theGlobalMotorMesh->X[node];
+        double y = theGlobalMotorMesh->Y[node];
+        return sqrt(x*x + y*y);
+    }
+
+    double distanceBetweenNodes(const motorMesh* theMotorMesh, const int node1, const int node2)
+    {
+        double* X = theMotorMesh->X;
+        double* Y = theMotorMesh->Y;
+        int* elem = theMotorMesh->elem;
+
+        double x1 = X[elem[node1]];
+        double y1 = Y[elem[node1]];
+
+        double x2 = X[elem[node2]];
+        double y2 = Y[elem[node2]];
+
+        return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+    }
+
+    double angle(const int node)
+    {
+        double* X  = theGlobalMotorMesh->X;
+        double* Y = theGlobalMotorMesh->Y;
+        //printf("(%f, %f) \n", X[node], Y[node]);
+        return atan2(Y[node], X[node]);
+    }
+
+    /**
+     * void qsort(void *base, size_t nmemb, size_t size,
+                  int (*compar)(const void *, const void *));
+
+        The comparison function must return an integer:
+        - less than 0 if the 1 argument is less than the second
+        - equal to 0 if the 1 argument is equal to the second  
+        - greater  than 0  if  the 1 argument is greater than the second.
+    */
+    int compareTo (const void* this, const void* that)
+    {
+        int* thisInt = (int*) this;
+        int* thatInt = (int*) that;
+
+        int thisNode = *(thisInt);
+        int thatNode = *(thatInt);
+
+        double angleThis = angle(thisNode);
+        double angleThat = angle(thatNode);
+
+        if(angleThis < angleThat) { return -1;}
+        else if( angleThis > angleThat) { return 1;}
+        else { return 0;}
+    }
 
 //
 // ========= Projet à réaliser ===================
@@ -266,89 +300,240 @@ void motorAdaptMesh(motor *theMotor, double delta)
     theMotor->theta += delta;
 
     // 1. Déterminer les noeuds sur le rayon intérieur ou sur le rayon extérieur
-        int startTriangleAirGap = startAirGap(theMotorMesh);
-        int endTriangleAirGap = endAirGap(theMotorMesh);
+        int startTriangleAirGap = startAirGap();
+        int endTriangleAirGap = endAirGap();
         //printf("startAirGap : %d, endAirGap : %d \n", startTriangleAirGap, endTriangleAirGap);
 
-        printTriangle(theMotorMesh,startTriangleAirGap);
+        //printTriangle(theMotorMesh,startTriangleAirGap);
 
         // calculer de la largeur annulaire : calculer le rayon de 3 noeuds d'un triangle dans Air_gap
         
-        double rayon1 = radius(theMotorMesh, elem[startTriangleAirGap*3]);
-        double rayon2 = radius(theMotorMesh, elem[startTriangleAirGap*3+1]);
-        double rayon3 = radius(theMotorMesh, elem[startTriangleAirGap*3+2]);
+        double rayon1 = radius(elem[startTriangleAirGap*3]);
+        double rayon2 = radius(elem[startTriangleAirGap*3+1]);
+        double rayon3 = radius(elem[startTriangleAirGap*3+2]);
         double rayonMax = fmax(rayon1, fmax(rayon2, rayon3));
-        double rayonMin = fmin(rayon1, fmin(rayon2,rayon3));
+        double rayonMin = fmin(rayon1, fmin(rayon2, rayon3));
         double mid = rayonMin + (rayonMax-rayonMin)/2.0;
         //printf("RayonMin : %f, RayonMax : %f, Mid : %f \n", rayonMin ,rayonMax, mid);
+
+        // TEST : compter le nombre de noeuds différents dans le maillage
+        int* marked2 = calloc((endTriangleAirGap-startTriangleAirGap)*3, sizeof(int));
+        int count =0;
+        for(int iTriangle = startTriangleAirGap; iTriangle < endTriangleAirGap; iTriangle++)
+        {
+            for(int i = 0; i < 3; i++)
+            {
+                int iNode = elem[iTriangle*3+i];
+                if( !marked2[iNode])
+                {
+                    marked2[iNode] =1;
+                    count++;
+                }
+            }
+        }
+        printf("NOMBRE DE NOEUDS DIFFÉRENTS DANS LE MAILLAGE AIR_GAP : %d\n", count);
+        free(marked2);
+        // fin du test
 
         int* noeudsRayonInterne = malloc(sizeof(int) * theMotorMesh->nElemDomain[Air_gap]*3); // Alloue trop de mémoire mais c'est pas grave
         int iRayonInterne = 0;
         int* noeudsRayonExterne = malloc(sizeof(int) * theMotorMesh->nElemDomain[Air_gap]*3); // Alloue trop de mémoire mais c'est pas grave
         int iRayonExterne = 0;
-
+        // marked[i] = 0 si le ieme noeud n'a pas encore été visité et 1 sinon
+        int* marked = calloc( (endTriangleAirGap-startTriangleAirGap)*3, sizeof(int)); // Alloue trop de mémoire mais c'est pas grave
         double rayonNode = 0.0;
+
+        count=0;
         for(int iTriangle = startTriangleAirGap; iTriangle < endTriangleAirGap; iTriangle++)
-        // Parcourir tous les noeuds dans Air_Gap et calculer leur rayon
+        // Parcourir tous les triangles dans Air_Gap 
         {
             for(int i=0; i< 3; i++)
+            // Pour chaque noeud, calculer son rayon
             {
-                rayonNode = radius(theMotorMesh, elem[iTriangle*3+i]);
-                //printf("current radius : %f | bound : %f \n",rayonNode,  mid);
-                if(rayonNode < mid)
-                // noeud situé sur le rayon intérieur du Air_gap
+                int iNode = elem[iTriangle*3+i];
+                if( !marked[iNode]) 
+                // le noeud n'a pas déjà été visité
                 {
-                    noeudsRayonInterne[iRayonInterne] = elem[iTriangle*3]; // ajouter le noeud dans la structure contenant les noeuds sur le rayon interne
-                    iRayonInterne++;
-                }
-                else
-                // noeud situé sur le rayon extérieur du Air_gap
-                {
-                    noeudsRayonExterne[iRayonExterne] = elem[iTriangle*3]; // ajouter le noeud dans la structure contenant les noeuds sur le rayon externe
-                    iRayonExterne++;
+                    count++;
+
+                    //printf("iNode : %d \n", iNode);
+                    marked[iNode] = 1;
+                    rayonNode = radius(iNode);
+                    //printf("current radius : %f | bound : %f \n",rayonNode,  mid);
+                    if(rayonNode < mid)
+                    // noeud situé sur le rayon intérieur du Air_gap
+                    {
+                        noeudsRayonInterne[iRayonInterne] = elem[iNode]; // ajouter le noeud dans la structure contenant les noeuds sur le rayon interne
+                        iRayonInterne++;
+                    }
+                    else
+                    // noeud situé sur le rayon extérieur du Air_gap
+                    {
+                        noeudsRayonExterne[iRayonExterne] = elem[iNode]; // ajouter le noeud dans la structure contenant les noeuds sur le rayon externe
+                        iRayonExterne++;
+                    }
                 }
             }
         }
-        noeudsRayonInterne = realloc(noeudsRayonInterne, sizeof(int) * iRayonInterne);
-        noeudsRayonExterne = realloc(noeudsRayonExterne, sizeof(int) * iRayonExterne);
-        printf("nombre de noeuds sur le rayon interne et externe : %d %d \n", iRayonInterne, iRayonExterne);
+        printf("COUNT : %d\n", count);
+        printf("Noeuds sur le rayon interne : %d \n", iRayonInterne);
+        printf("Noeuds sur le rayon externe : %d \n", iRayonExterne);
+        printf("Nombre total de noeud : %d \n", iRayonInterne + iRayonExterne);
+
+        noeudsRayonInterne = realloc((void*) noeudsRayonInterne, sizeof(int) * iRayonInterne);
+        noeudsRayonExterne = realloc((void*) noeudsRayonExterne, sizeof(int) * iRayonExterne);
+
         
     // 2. Trier les 2 tableaux noeudsRayonInterne et noeudsRayonExterne selon leur angle
         qsort( (void*) noeudsRayonInterne, iRayonInterne, sizeof(int), &compareTo);
         qsort( (void*) noeudsRayonExterne, iRayonExterne, sizeof(int), &compareTo);
+       // void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *));
 
+        printIntArray("Noeuds sur le rayon interne", noeudsRayonInterne);
+        for(int i=0; i< iRayonInterne; i++)
+        {
+            printf("%d - node %d : (%f,%f) : angle = %f \n",i, noeudsRayonInterne[i], X[noeudsRayonInterne[i]], Y[noeudsRayonInterne[i]], angle(noeudsRayonInterne[i]));
+        }
 
+        printIntArray("Noeuds sur le rayon externe", noeudsRayonExterne);
+        for(int i=0; i< iRayonExterne; i++)
+        {
+            printf("%d - node %d : (%f,%f) : angle = %f \n",i, noeudsRayonExterne[i], X[noeudsRayonExterne[i]], Y[noeudsRayonExterne[i]], angle(noeudsRayonExterne[i]));
+        }
+/*
     // 3.
+        int iTriangle = startTriangleAirGap;
+
         // Pour chaque noeud dans le rayon exterieur, déterminer les 2 noeuds les plus proches 
         // dans le rayon intérieur
+        int closestNodes[2]; 
         for(int iNode = 0; iNode < iRayonExterne; iNode++)
         {
-            // recherche dichotomique  via l'angle du noeud courant dans noeudsRayonInterne pour trouver  
-            // le noeud le plus proche
+            // recherche dichotomique  via l'angle du noeud courant dans noeudsRayonInterne 
+            // pour trouver le noeud le plus proche
             int lo = 0;
             int hi = iRayonInterne;
             while(lo <= hi)
             {
-                int mid = lo + (hi-lo)/2.0;
-                if(angle(iNode) < angle(noeudsRayonInterne[mid])) {hi = mid-1;}
-                else if(angle(iNode) > angle(noeudsRayonInterne[mid])) {lo = mid+1;}
-                else {}
+                int mid = lo + (hi-lo)/2;
+                if(angle(iNode) < angle(noeudsRayonInterne[mid])) { hi = mid-1; }
+                else if(angle(iNode) > angle(noeudsRayonInterne[mid])) { lo = mid+1; }
+                else // angle(iNode) == angle(noeudsRayonInterne[mid] 
+                {
+                    closestNodes[0] = noeudsRayonInterne[mid];
+                    // regarder qui est le deuxième plus proche : mid +1 ou mid-1 ?
+                    if(mid == iRayonInterne)
+                    //cas lorsque mid ce situe à la dernière position du tableau
+                    {
+                        int diffA = fabs( angle(noeudsRayonInterne[0]) - angle(iNode) );
+                        int diffB = fabs( angle(noeudsRayonInterne[mid-1]) - angle(iNode) );
+                        if(diffA < diffB) { closestNodes[1] = noeudsRayonInterne[0];}
+                        else {closestNodes[1] = noeudsRayonInterne[mid-1];}
+                        break;
+                    }
+                    else if( mid == 0)
+                    // cas lorsque mid est au début du tableau
+                    {
+                        int diffA = fabs( angle(noeudsRayonInterne[mid+1]) - angle(iNode) );
+                        int diffB = fabs( angle(noeudsRayonInterne[iRayonInterne]) - angle(iNode) );
+                        if(diffA < diffB) { closestNodes[1] = noeudsRayonInterne[mid+1];}
+                        else {closestNodes[1] = noeudsRayonInterne[iRayonInterne];}
+                        break;
+                    }
+                    else
+                    // cas habituel
+                    {
+                        int diffA = fabs( angle(noeudsRayonInterne[mid+1]) - angle(iNode) );
+                        int diffB = fabs( angle(noeudsRayonInterne[mid-1]) - angle(iNode) );
+                        if(diffA < diffB) { closestNodes[1] = noeudsRayonInterne[mid+1];}
+                        else {closestNodes[1] = noeudsRayonInterne[mid-1];}
+                        break;
+                    }
+                }   
             }
-            // keep track of last compared node to find the closest (when the equals does not exist)
+            if(lo > hi)
+            {
+                closestNodes[0] = noeudsRayonInterne[hi];
+                closestNodes[1] = noeudsRayonInterne[lo];
+            }
+
+            //4. remailler maintenant que les 2 noeuds sur le rayon intérieur les plus proches
+            // sont connus.
+            // creer le triangle formé des 3 noeuds: noeudsRayonExterne[iNode], closestNodes[0], closesteNodes[1]           
+            
+            theMotorMesh->elem[iTriangle*3] = noeudsRayonExterne[iNode];
+            theMotorMesh->elem[iTriangle*3+1] = closestNodes[0];
+            theMotorMesh->elem[iTriangle*3+2] = closestNodes[1];
+            iTriangle++;
         }
 
+        
         // Pour chaque noeud dans le rayon intérieur, déterminer les 2 noeuds les plus proches 
         // dans le rayon extérieur
-        for(int iNode = 0; iNode < iRayonExterne; iNode++)
+        for(int iNode = 0; iNode < iRayonInterne; iNode++)
         {
-            // recherche dichotomique selon l'angle du noeud courant dans noeudsRayonExterne pour trouver
-            // le noeud le plus proche
+            int lo = 0;
+            int hi = iRayonExterne;
+            while(lo <= hi)
+            {
+                int mid = lo + (hi-lo)/2;
+                if(angle(iNode) < noeudsRayonExterne[mid]) {hi = mid-1;}
+                else if(angle(iNode) > noeudsRayonExterne[mid]) {lo = mid +1;}
+                else
+                {
+                    closestNodes[0] = noeudsRayonExterne[mid];
+                    if(mid == 0)
+                    {
+                        double diffA = fabs( angle(noeudsRayonExterne[mid+1]) - angle(iNode));
+                        double diffB = fabs( angle(noeudsRayonExterne[iRayonExterne]) - angle(iNode));
+                        if(diffA < diffB) { closestNodes[1] = noeudsRayonExterne[mid+1];}
+                        else {closestNodes[1] = noeudsRayonExterne[iRayonExterne];}
+                        break;
+                    }
+                    else if( mid == iRayonExterne)
+                    {
+                        double diffA = fabs( angle(noeudsRayonExterne[0]) - angle(iNode));
+                        double diffB = fabs( angle(noeudsRayonExterne[mid+1]) - angle(iNode));
+                        if(diffA < diffB) {closestNodes[1] = noeudsRayonExterne[0];}
+                        else {closestNodes[1] = noeudsRayonExterne[mid+1];}
+                        break;
+                    }
+                    else
+                    {
+                        double diffA = fabs( angle(noeudsRayonExterne[mid-1]) - angle(iNode));
+                        double diffB = fabs( angle(noeudsRayonExterne[mid+1]) - angle(iNode));
+                        if(diffA < diffB) {closestNodes[1] = noeudsRayonExterne[mid-1];}
+                        else {closestNodes[1] = noeudsRayonExterne[mid+1];}
+                        break;
+                    }
+                }
+            }
+            if(lo > hi)
+            {
+                closestNodes[0] = noeudsRayonExterne[hi];
+                closestNodes[1] = noeudsRayonInterne[lo];
+            }
+
+            //4. remailler maintenant que les 2 noeuds sur le rayon intérieur les plus proches
+            // sont connus.
+            // creer le triangle formé des 3 noeuds: noeudsRayonExterne[iNode], closestNodes[0], closestNodes[1]           
+            
+            theMotorMesh->elem[iTriangle*3] = noeudsRayonInterne[iNode];
+            theMotorMesh->elem[iTriangle*3+1] = closestNodes[0];
+            theMotorMesh->elem[iTriangle*3+2] = closestNodes[1];
+            iTriangle++;
         }
-
-
+        
+        if(iTriangle != theMotorMesh->nElemDomain[Air_gap])
+        {
+            printf("ERROR NUMBER OF TRIANGLES IN AIR_GAP : %d, expected: %d \n", iTriangle,theMotorMesh->nElemDomain[Air_gap]);
+        }
+    */
+   
+    free(marked);
     free(noeudsRayonInterne);
     free(noeudsRayonExterne);
-
+    
 }
 
 double motorComputeCouple(motor *theMotor)
@@ -460,6 +645,8 @@ void motorComputeMagneticPotential(motor* theMotor)
 // Enlever du number dans la fonction motorMeshToFemMeshConverter
 // Trier les noeuds dans air_gap pour avoir plus facile pour les retrouver par la suite.
 
+// Pour ajuster les noeuds dans moving_nodes, comme ce sont les domaines 8,9 et 10 on
+// peut éviter de passer sur l'intégralité des noeuds mais uniquement sur ceux la.
 
 /**
  *  Idée pour trouver l'arête commune:
@@ -469,3 +656,4 @@ void motorComputeMagneticPotential(motor* theMotor)
  * - un hash qui correspondant à la combinaison de ces 3 noeuds
  * et trier ses structures selon leur hash.
  */
+

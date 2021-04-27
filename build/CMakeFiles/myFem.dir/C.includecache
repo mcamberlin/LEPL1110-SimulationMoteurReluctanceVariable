@@ -21,6 +21,8 @@ assert.h
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.c
 motor.h
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.h
+float.h
+-
 
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.h
 fem.h

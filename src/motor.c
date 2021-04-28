@@ -1,7 +1,7 @@
 #include "motor.h"
 #include <float.h>
 
-static motorMesh* theGlobalMotorMesh;
+const static motorMesh* theGlobalMotorMesh;
 
 typedef enum 
 {
@@ -182,13 +182,8 @@ void printIntArray(const char* name, const int* ptr)
         return sqrt(x*x + y*y);
     }
 
-    double distanceBetweenNodes(const int node1, const int node2)
+    double distance(const double x1, const double y1, const double x2, const double y2)
     {
-        double x1 = theGlobalMotorMesh->X[node1];
-        double y1 = theGlobalMotorMesh->Y[node1];
-        double x2 = theGlobalMotorMesh->X[node2];
-        double y2 = theGlobalMotorMesh->Y[node2];
-
         return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
     }
 
@@ -232,91 +227,108 @@ void motorAdaptMesh(motor *theMotor, double delta)
     theMotor->theta += delta;
     
     
-    // 1. Déterminer si les noeuds sur le rayon intérieur ou sur le rayon extérieur
-        int startTriangleAirGap = startAirGap();
-        int endTriangleAirGap = endAirGap();
-        //printf("startAirGap : %d, endAirGap : %d \n", startTriangleAirGap, endTriangleAirGap);
+    int startTriangleAirGap = startAirGap();
+    int endTriangleAirGap = endAirGap();
+    //printf("startAirGap : %d, endAirGap : %d \n", startTriangleAirGap, endTriangleAirGap);
+    //printTriangle(theMotorMesh,startTriangleAirGap);
 
-        //printTriangle(theMotorMesh,startTriangleAirGap);
+    // calculer de la largeur annulaire : calculer le rayon de 3 noeuds d'un triangle dans Air_gap
+    double rayon1 = radius(elem[startTriangleAirGap*3]);
+    double rayon2 = radius(elem[startTriangleAirGap*3+1]);
+    double rayon3 = radius(elem[startTriangleAirGap*3+2]);
+    double rayonMax = fmax(rayon1, fmax(rayon2, rayon3));
+    double rayonMin = fmin(rayon1, fmin(rayon2, rayon3));
+    double mid = rayonMin + (rayonMax-rayonMin)/2.0;
+    printf("RayonMin : %f, RayonMax : %f, Mid : %f \n", rayonMin ,rayonMax, mid);
 
-        // calculer de la largeur annulaire : calculer le rayon de 3 noeuds d'un triangle dans Air_gap
-        
-        double rayon1 = radius(elem[startTriangleAirGap*3]);
-        double rayon2 = radius(elem[startTriangleAirGap*3+1]);
-        double rayon3 = radius(elem[startTriangleAirGap*3+2]);
-        double rayonMax = fmax(rayon1, fmax(rayon2, rayon3));
-        double rayonMin = fmin(rayon1, fmin(rayon2, rayon3));
-        double mid = rayonMin + (rayonMax-rayonMin)/2.0;
-        printf("RayonMin : %f, RayonMax : %f, Mid : %f \n", rayonMin ,rayonMax, mid);
+    double rayonNode = 0.0; 
+    int noeudsExt[2]; // numéros des noeuds sur le rayon extérieur
+    int noeudInt; // numéro du noeud sur le rayon intérieur
+    int iNode;
+    double xOpt; // abscisse optimale pour créer un triangle équilatéral
+    double yOpt; // ordonnée optimale pour créer un triangle équilatéral
 
-        // Parcourir tous les noeuds et regarder dans à quel rayon ils appartiennent...
-
-        int* noeudsRayonInterne = malloc(sizeof(int) * theMotorMesh->nElemDomain[Air_gap]*3); // Alloue trop de mémoire mais c'est pas grave
-        int* noeudsRayonExterne = malloc(sizeof(int) * theMotorMesh->nElemDomain[Air_gap]*3); // Alloue trop de mémoire mais c'est pas grave
-        int indexRayonInterne = 0;
-        int indexRayonExterne = 0;
+    int iNode2;
+    double currentDistance;
+    double minDistance = DBL_MAX;
+    int closestIntNode = -1;
 
 
-        // marked[i] = 0 si le ieme noeud n'a pas encore été visité et 1 sinon
-        int* marked = calloc( theMotorMesh->nNode, sizeof(int)); // Alloue bcp trop de mémoire mais bon
-        int count = 0; // nombre de noeuds différents dans Air_Gap
-        double rayonNode = 0.0; 
+    // Ne considérer que les noeuds sur le rayon extérieur de la bande glissante (ils sont immobiles)
+    for(int iTriangle = startTriangleAirGap; iTriangle < endTriangleAirGap; iTriangle++)
+    // Parcourir tous les triangles dans Air_Gap 
+    {
+        // Réinitialiser les 2 noeuds courants sur le rayon exéterieur
+        noeudsExt[0] = -1;
+        noeudsExt[1] = -1;
+        // Réinitialiser le noeud courant sur le rayon intérieur
+        noeudInt = -1;
 
-        for(int iTriangle = startTriangleAirGap; iTriangle < endTriangleAirGap; iTriangle++)
-        // Parcourir tous les triangles dans Air_Gap 
+        for(int i = 0; i < 3; i++)
+        // Pour chaque noeud, calculer son rayon
         {
-            for(int i = 0; i < 3; i++)
-            // Pour chaque noeud, calculer son rayon
-            {
-                int iNode = elem[iTriangle*3+i];
-                //printf("iNode : %d \n", iNode);
-                if( !marked[iNode])
-                // le noeud n'a pas déjà été visité
-                {
-                    //printf("iNode : %d \n", iNode);
-                    marked[iNode] = 1;
-                    rayonNode = radius(iNode); 
-                    //printf("current radius : %f | bound : %f \n",rayonNode,  mid);
-                    count++;
+            iNode = elem[iTriangle*3+i];
+            //printf("iNode : %d \n", iNode);
+            
+            //printf("iNode : %d \n", iNode);
+            rayonNode = radius(iNode); 
+            //printf("current radius : %f | bound : %f \n",rayonNode,  mid);
 
-                    if( rayonNode > mid) 
-                    // noeud situé sur le rayon extérieur du Air_gap
-                    {
-                        noeudsRayonExterne[indexRayonExterne] = iNode;
-                        // ajouter le noeud dans la structure contenant les noeuds sur le rayon externe
-                        indexRayonExterne++;
-                    }
-                    else if(rayonNode < mid )
-                    // noeud situé sur le rayon intérieur du Air_gap
-                    {
-                        noeudsRayonInterne[indexRayonInterne] = iNode;
-                        // ajouter le noeud dans la structure contenant les noeuds sur le rayon interne
-                        indexRayonInterne++;
-                    }
+            if( rayonNode > mid) 
+            // noeud situé sur le rayon extérieur du Air_gap
+            {
+                if(noeudsExt[0] == -1)
+                {
+                    noeudsExt[0] = iNode;
+                }
+                else if(noeudsExt[1] == -1)
+                {
+                    noeudsExt[1] = iNode;
+                }
+                else 
+                {
+                    printf("ERREUR, on ne devrait pas arriver ici \n");
                 }
             }
+            else if(rayonNode < mid )
+            // noeud situé sur le rayon intérieur du Air_gap
+            {
+                noeudInt = iNode;
+            }
+
+            // Déterminer la position optimale du noeud sur le rayon intérieur pour former un triangle équilatéral:
+            xOpt = (X[noeudsExt[0]] + X[noeudsExt[1]]) /2.0;
+            yOpt = (Y[noeudsExt[0]] + Y[noeudsExt[1]]) /2.0;
+            
+            // Trouver le noeud sur le rayon interne qui est le plus proche du point optimal
+            for(int iTriangle2 = startAirGap; iTriangle2 < endTriangleAirGap; iTriangle2++)
+            {
+                for(int i = 0; i<3; i++)
+                {
+                    iNode2 = elem[iTriangle2*3+i];
+                    if(radius(iNode) < mid)
+                    // Si le noeud se situe sur le rayon intérieur
+                    {
+                        // calculer les distances entre le point optimal et le noeud courant
+                        currentDistance = distance(xOpt, yOpt, X[iNode2], Y[iNode2]);
+                        if(currentDistance < minDistance)
+                        // comparer avec les précédentes distances calculées et mettre à jour si besoin
+                        {
+                            minDistance = currentDistance;
+                            closestIntNode = iNode2;
+                        }
+                    }
+                    
+                }
+            }  
+
+            // Nouveau triangle trouvé 
+
+            // ... TO CONTINUE
         }
-        free(marked);
-
-        printf("Noeuds sur le rayon interne : %d \n", indexRayonInterne);
-        printf("Noeuds sur le rayon externe : %d \n", indexRayonExterne);
-        printf("Nombre total de noeud : %d \n", count);
-
-        noeudsRayonInterne = realloc((void*) noeudsRayonInterne, sizeof(int) * indexRayonInterne);
-        noeudsRayonExterne = realloc((void*) noeudsRayonExterne, sizeof(int) * indexRayonExterne);
-
-        
-        printIntArray("Noeuds sur le rayon interne", noeudsRayonInterne);
-        for(int i=0; i< indexRayonInterne; i++)
-        {
-            printf("%d - noeud %d : (%f,%f)\n",i, noeudsRayonInterne[i], X[noeudsRayonInterne[i]], Y[noeudsRayonInterne[i]]);
-        }
-
-        printIntArray("Noeuds sur le rayon externe", noeudsRayonExterne);
-        for(int i=0; i< indexRayonExterne; i++)
-        {
-            printf("%d - noeud %d : (%f,%f)\n",i, noeudsRayonExterne[i], X[noeudsRayonExterne[i]], Y[noeudsRayonExterne[i]]);
-        }
+    }
+    
+    
 
         // Pour chaque noeud dans le rayon intérieur, déterminer les 2 noeuds les plus proches 
         // dans le rayon extérieur
@@ -333,10 +345,8 @@ void motorAdaptMesh(motor *theMotor, double delta)
 
             for(int externNode = 0; externNode < indexRayonExterne; externNode ++)
             {
-                // calculer les distances entre internNode et externNode
                 currentDistance = squarredDistanceBetweenNodes(internNode, externNode); // la distance au carré est utilisée
 
-                // comparer avec les précédentes distances calculées et mettre à jour si besoin
                 if(currentDistance < closestDistances[0])
                 {
                     closestDistances[1] = closestDistances[0];

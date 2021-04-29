@@ -1,6 +1,10 @@
 #include "motor.h"
 #include <float.h>
 
+typedef int bool;
+#define true 1
+#define false 0
+
 const static motorMesh* theGlobalMotorMesh;
 
 typedef enum 
@@ -159,54 +163,64 @@ void printIntArray(const char* name, const int* ptr)
 //
 // ========= Fonctions utiles motorAdaptMesh() ===================
 //
-    typedef struct {
-        int node;
-        int* elem;
-        int nbNodes;
-    } triangle;
 
-    triangle* createTriangle()
-    {
-        triangle* theTriangle = malloc(sizeof(triangle));
-        theTriangle->node = -1;
-        theTriangle->elem[0] = -1;
-        theTriangle->elem[1] = -1;
-        theTriangle->elem[2] = -1;
-        theTriangle->nbNodes = 0;
-        return theTriangle;
-    }
+typedef struct {
+    int node;
+    int* indexTriangles; // indices des triangles auquel appartient le noeud
+    int nbElems;
+} triangle;
 
-    int startAirGap()
-    {
-        int start = 0;
-        for(int i=0; i< Air_gap; i++)
-        {
-            start += theGlobalMotorMesh->nElemDomain[i];
-        }
-        return start; 
-    }
+static triangle** theGlobalNewTriangles;
 
-    int endAirGap()
-    {
-        return startAirGap() + theGlobalMotorMesh->nElemDomain[Air_gap];    
-    }
+triangle* createNewTriangle(int iNode, int iTriangle)
+{
+    triangle* theTriangle = malloc(sizeof(triangle));
+    theTriangle->node = iNode;
+    theTriangle->indexTriangles = malloc(sizeof(int)*3); // un noeud appartient au plus à 3 autres triangles
+    theTriangle->indexTriangles[0] = iTriangle;
+    theTriangle->indexTriangles[1] = -1;
+    theTriangle->indexTriangles[2] = -1;
+    theTriangle->nbElems = 1;
+    return theTriangle;
+}  
 
-    double radius(const int node)
-    {
-        double x = theGlobalMotorMesh->X[node];
-        double y = theGlobalMotorMesh->Y[node];
-        return sqrt(x*x + y*y);
-    }
+void freeNewTriangle(triangle* t)
+{
+    free(t->indexTriangles);
+    free(t);
+}
 
-    double distance(const double x1, const double y1, const double x2, const double y2)
+int startAirGap()
+{
+    int start = 0;
+    for(int i=0; i< Air_gap; i++)
     {
-        return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+        start += theGlobalMotorMesh->nElemDomain[i];
     }
+    return start; 
+}
 
-    double squarredDistanceBetweenNodes(const double x1, const double y1, const double x2, const double y2)
-    {
-        return  (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);
-    }
+int endAirGap()
+{
+    return startAirGap() + theGlobalMotorMesh->nElemDomain[Air_gap];    
+}
+
+double radius(const int node)
+{
+    double x = theGlobalMotorMesh->X[node];
+    double y = theGlobalMotorMesh->Y[node];
+    return sqrt(x*x + y*y);
+}
+
+double distance(const double x1, const double y1, const double x2, const double y2)
+{
+    return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+}
+
+double squarredDistanceBetweenNodes(const double x1, const double y1, const double x2, const double y2)
+{
+    return  (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);
+}
 
 
 
@@ -222,7 +236,9 @@ void motorAdaptMesh(motor *theMotor, double delta)
     double* X = theMotorMesh->X;
     double* Y = theMotorMesh->Y;
     int* elem = theMotorMesh->elem;
+    int* nElemDomain = theMotorMesh->nElemDomain;
     double L = theMotor->L;
+
     
     double x,y;
     for(int i = 0; i < theMotorMesh->nNode; ++i)
@@ -252,14 +268,16 @@ void motorAdaptMesh(motor *theMotor, double delta)
     //printf("RayonMin : %f, RayonMax : %f, Mid : %f \n", rayonMin ,rayonMax, mid);
 
     double rayonNode = 0.0; 
-    int noeudsExt[2]; // numéros des noeuds sur le rayon extérieur
-    int nbNoeudsExt = 0; // nombre de noeuds du triangle courant qui sont sur le rayon extérieur
-    int nbNoeudsInt = 0; // nombre de noeuds du triangle courant qui sont sur le rayon intérieur
-
-    int noeudInt; // numéro du noeud sur le rayon intérieur
-    int indexNoeudInt = -1; // position du noeud sur le rayon intérieur
-    int indexNoeudExt1 = -1; 
-    int indexNoeudExt2 = -1;
+    
+    // numéros des noeuds sur le rayon extérieur / intérieur
+    // position du 1er noeud sur le rayon extérieur / intérieur
+    // position du 2eme noeud sur le rayon extérieur / intérieur
+    // nombre de noeuds sur le rayon extérieur / intérieur
+    int noeudsExt[2];           int noeudsInt[2];
+    int indexNoeudExt1 = -1;    int indexNoeudInt1 = -1;
+    int indexNoeudExt2 = -1;    int indexNoeudInt2 = -1;
+    int nbNoeudsExt = 0;        int nbNoeudsInt = 0;
+    
 
     int iNode;
     double xOpt; // abscisse optimale pour créer un triangle équilatéral
@@ -270,15 +288,17 @@ void motorAdaptMesh(motor *theMotor, double delta)
     double minDistance = DBL_MAX;
     int closestIntNode = -1;
 
+    triangle** theNewTriangles = malloc(sizeof(triangle*) * nElemDomain[Air_gap]);
+    theGlobalNewTriangles = theNewTriangles;
+    int nbNewTriangles = 0;
+
     // Ne considérer que les noeuds sur le rayon extérieur de la bande glissante (ils sont immobiles)
     for(int iTriangle = startTriangleAirGap; iTriangle < endTriangleAirGap; iTriangle++)
     // Parcourir tous les triangles dans Air_Gap 
     {
-        // Réinitialiser les 2 noeuds courants sur le rayon exéterieur
-        noeudsExt[0] = -1;
-        noeudsExt[1] = -1;
-        // Réinitialiser le noeud courant sur le rayon intérieur
-        noeudInt = -1;
+        // Réinitialiser les noeuds courants sur le rayon intérieur/extérieur
+        noeudsExt[0] = -1;      noeudsInt[0] = -1;
+        noeudsExt[1] = -1;      noeudsInt[1] = -1;
 
         for(int i = 0; i < 3; i++)
         // Pour chaque noeud, calculer son rayon
@@ -305,22 +325,27 @@ void motorAdaptMesh(motor *theMotor, double delta)
                     indexNoeudExt2 = i;
                     nbNoeudsExt++;
                 }
-                else 
-                {
-                    printf("ERREUR, on ne devrait pas arriver ici: les 3 noeuds ne peuvent pas être sur le rayonExt \n");
-                }
             }
             else if(rayonNode < mid )
             // noeud situé sur le rayon intérieur du Air_gap
             {
-                noeudInt = iNode;
-                indexNoeudInt = i;
-                nbNoeudsInt++;
+                if(noeudsInt[0] == -1)
+                {
+                    noeudsInt[0] = iNode;
+                    indexNoeudInt1 = i;
+                    nbNoeudsInt++;
+                }
+                else if(noeudsInt[1] == -1)
+                {
+                    noeudsExt[1] = iNode;
+                    indexNoeudInt2 = i;
+                    nbNoeudsInt++;
+                }
             }
         }
 
         if(nbNoeudsInt == 1 && nbNoeudsExt == 2)
-        // Si il s'agit d'un triangle à base sur le rayon extérieur
+        // Si il s'agit d'un triangle formé de 2 noeuds sur le rayon extérieur
         {
             // Déterminer la position optimale du noeud sur le rayon intérieur pour former un triangle équilatéral:
             xOpt = (X[noeudsExt[0]] + X[noeudsExt[1]]) /2.0;
@@ -349,11 +374,50 @@ void motorAdaptMesh(motor *theMotor, double delta)
 
             // Nouveau triangle trouvé formé des noeuds: noeudsExt[0], noeudsExt[1] et closestIntNode
             //printf("iTriangle %d: noeuds (%d %d %d) \t après rotation: (%d %d %d) \n",iTriangle, noeudsExt[0], noeudsExt[1], noeudInt, noeudsExt[0], noeudsExt[1], closestIntNode);
-            //newElem[iTriangle*3+indexNoeudInt] = closestIntNode;
+            elem[iTriangle*3+indexNoeudInt1] = closestIntNode;
+
+
+            // Déterminer si closestNode est déja ds un triangle
+            bool isInNewTriangles = false;
+            int indexInNewTriangles = -1;
+            for(int i = 0; i < nbNewTriangles; i++)
+            {
+                if(theNewTriangles[i]->node == closestIntNode)
+                {
+                    isInNewTriangles = true;
+                    indexInNewTriangles = i;
+                    break;
+                }
+            }
+            
+            if(! isInNewTriangles)
+            // closestNode n'est pas dans theNewTriangles
+            {
+                triangle* newTriangle = createNewTriangle(closestIntNode, iTriangle);
+                theNewTriangles[nbNewTriangles] = newTriangle;
+                nbNewTriangles++;
+            }
+            else
+            // le noeud optimal est déjà dans theNewTriangles
+            {
+                triangle* tmpTriangle = theNewTriangles[indexInNewTriangles];
+                int tmpNumber = tmpTriangle->nbElems;
+                tmpTriangle->indexTriangles[tmpNumber] = iTriangle;
+                tmpTriangle->nbElems++; 
+            }
         }
         
 
     }
+
+
+
+    // libérer la mémoire allouée
+    for(int i =0; i<nbNewTriangles;i++)
+    {
+        freeNewTriangle(theNewTriangles[i]);
+    }
+    free(theNewTriangles);
 }
 
 

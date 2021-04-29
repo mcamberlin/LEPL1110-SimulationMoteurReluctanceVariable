@@ -33,7 +33,7 @@ int main(void)
 
     double 	theDiscreteTime = 0.0;
     double 	theStartingTime = 0.0;
-    double  theTimeStep  = 0.1;
+    double  theTimeStep  = 0.01; //0.2; // 0.1;
     double  theStop = 0;
     double  omega = 1.0;
     int     thePlotMode = 1;

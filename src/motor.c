@@ -17,7 +17,7 @@ typedef enum
     Air_gap = 11,
     Stator_gap = 7,
     Rotor_air = 9
-} iDomain;
+}iDomain;
 
 void printFemMesh(const femMesh* theFemMesh)
 {
@@ -159,6 +159,22 @@ void printIntArray(const char* name, const int* ptr)
 //
 // ========= Fonctions utiles motorAdaptMesh() ===================
 //
+    typedef struct {
+        int node;
+        int* elem;
+        int nbNodes;
+    } triangle;
+
+    triangle* createTriangle()
+    {
+        triangle* theTriangle = malloc(sizeof(triangle));
+        theTriangle->node = -1;
+        theTriangle->elem[0] = -1;
+        theTriangle->elem[1] = -1;
+        theTriangle->elem[2] = -1;
+        theTriangle->nbNodes = 0;
+        return theTriangle;
+    }
 
     int startAirGap()
     {
@@ -187,14 +203,9 @@ void printIntArray(const char* name, const int* ptr)
         return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
     }
 
-    double squarredDistanceBetweenNodes(const int node1, const int node2)
+    double squarredDistanceBetweenNodes(const double x1, const double y1, const double x2, const double y2)
     {
-        double x1 = theGlobalMotorMesh->X[node1];
-        double y1 = theGlobalMotorMesh->Y[node1];
-        double x2 = theGlobalMotorMesh->X[node2];
-        double y2 = theGlobalMotorMesh->Y[node2];
-
-        return (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);   
+        return  (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);
     }
 
 
@@ -226,7 +237,6 @@ void motorAdaptMesh(motor *theMotor, double delta)
     }
     theMotor->theta += delta;
     
-    
     int startTriangleAirGap = startAirGap();
     int endTriangleAirGap = endAirGap();
     //printf("startAirGap : %d, endAirGap : %d \n", startTriangleAirGap, endTriangleAirGap);
@@ -239,11 +249,18 @@ void motorAdaptMesh(motor *theMotor, double delta)
     double rayonMax = fmax(rayon1, fmax(rayon2, rayon3));
     double rayonMin = fmin(rayon1, fmin(rayon2, rayon3));
     double mid = rayonMin + (rayonMax-rayonMin)/2.0;
-    printf("RayonMin : %f, RayonMax : %f, Mid : %f \n", rayonMin ,rayonMax, mid);
+    //printf("RayonMin : %f, RayonMax : %f, Mid : %f \n", rayonMin ,rayonMax, mid);
 
     double rayonNode = 0.0; 
     int noeudsExt[2]; // numéros des noeuds sur le rayon extérieur
+    int nbNoeudsExt = 0; // nombre de noeuds du triangle courant qui sont sur le rayon extérieur
+    int nbNoeudsInt = 0; // nombre de noeuds du triangle courant qui sont sur le rayon intérieur
+
     int noeudInt; // numéro du noeud sur le rayon intérieur
+    int indexNoeudInt = -1; // position du noeud sur le rayon intérieur
+    int indexNoeudExt1 = -1; 
+    int indexNoeudExt2 = -1;
+
     int iNode;
     double xOpt; // abscisse optimale pour créer un triangle équilatéral
     double yOpt; // ordonnée optimale pour créer un triangle équilatéral
@@ -252,7 +269,6 @@ void motorAdaptMesh(motor *theMotor, double delta)
     double currentDistance;
     double minDistance = DBL_MAX;
     int closestIntNode = -1;
-
 
     // Ne considérer que les noeuds sur le rayon extérieur de la bande glissante (ils sont immobiles)
     for(int iTriangle = startTriangleAirGap; iTriangle < endTriangleAirGap; iTriangle++)
@@ -280,33 +296,43 @@ void motorAdaptMesh(motor *theMotor, double delta)
                 if(noeudsExt[0] == -1)
                 {
                     noeudsExt[0] = iNode;
+                    indexNoeudExt1 = i;
+                    nbNoeudsExt++;
                 }
                 else if(noeudsExt[1] == -1)
                 {
                     noeudsExt[1] = iNode;
+                    indexNoeudExt2 = i;
+                    nbNoeudsExt++;
                 }
                 else 
                 {
-                    printf("ERREUR, on ne devrait pas arriver ici \n");
+                    printf("ERREUR, on ne devrait pas arriver ici: les 3 noeuds ne peuvent pas être sur le rayonExt \n");
                 }
             }
             else if(rayonNode < mid )
             // noeud situé sur le rayon intérieur du Air_gap
             {
                 noeudInt = iNode;
+                indexNoeudInt = i;
+                nbNoeudsInt++;
             }
+        }
 
+        if(nbNoeudsInt == 1 && nbNoeudsExt == 2)
+        // Si il s'agit d'un triangle à base sur le rayon extérieur
+        {
             // Déterminer la position optimale du noeud sur le rayon intérieur pour former un triangle équilatéral:
             xOpt = (X[noeudsExt[0]] + X[noeudsExt[1]]) /2.0;
             yOpt = (Y[noeudsExt[0]] + Y[noeudsExt[1]]) /2.0;
             
             // Trouver le noeud sur le rayon interne qui est le plus proche du point optimal
-            for(int iTriangle2 = startAirGap; iTriangle2 < endTriangleAirGap; iTriangle2++)
+            for(int iTriangle2 = startTriangleAirGap; iTriangle2 < endTriangleAirGap; iTriangle2++)
             {
                 for(int i = 0; i<3; i++)
                 {
                     iNode2 = elem[iTriangle2*3+i];
-                    if(radius(iNode) < mid)
+                    if(radius(iNode2) < mid)
                     // Si le noeud se situe sur le rayon intérieur
                     {
                         // calculer les distances entre le point optimal et le noeud courant
@@ -318,96 +344,20 @@ void motorAdaptMesh(motor *theMotor, double delta)
                             closestIntNode = iNode2;
                         }
                     }
-                    
                 }
             }  
 
-            // Nouveau triangle trouvé 
-
-            // ... TO CONTINUE
-        }
-    }
-    
-    
-
-        // Pour chaque noeud dans le rayon intérieur, déterminer les 2 noeuds les plus proches 
-        // dans le rayon extérieur
-        int closestNodes[2];  // numéros des noeuds les plus proches
-        double closestDistances[2] = {-1.0,-1.0};
-        double currentDistance;
-
-        int iNewTriangle = startTriangleAirGap;
-
-        for(int internNode = 0; internNode < indexRayonInterne; internNode++)
-        {
-            closestNodes[0] = -1;   closestDistances[0] = DBL_MAX;
-            closestNodes[1] = -1;   closestDistances[1] = DBL_MAX;
-
-            for(int externNode = 0; externNode < indexRayonExterne; externNode ++)
-            {
-                currentDistance = squarredDistanceBetweenNodes(internNode, externNode); // la distance au carré est utilisée
-
-                if(currentDistance < closestDistances[0])
-                {
-                    closestDistances[1] = closestDistances[0];
-                    closestNodes[1] = closestNodes[0];
-                    closestNodes[0] = externNode;
-                    closestDistances[0] = currentDistance;
-                }
-                else if(currentDistance < closestDistances[1])
-                {
-                    closestNodes[1] = externNode;
-                    closestDistances[1] = currentDistance;
-                }
-
-            }
-            // Créer le triangle maintenant que les 2 noeuds les plus proches du noeud internNode sont connus
-            elem[iNewTriangle*3] = internNode;
-            elem[iNewTriangle*3+1] = closestNodes[0];
-            elem[iNewTriangle*3+2] = closestNodes[1];
-            iNewTriangle++;
-        }
-   
-        for(int externNode = 0; externNode < indexRayonExterne; externNode++)
-        {
-            closestNodes[0] = -1;       closestDistances[0] = DBL_MAX;
-            closestNodes[1] = -1;       closestDistances[1] = DBL_MAX;
-
-            for(int internNode = 0; internNode < indexRayonInterne; internNode++)
-            {
-                currentDistance = squarredDistanceBetweenNodes(externNode, internNode);
-                if(currentDistance < closestDistances[0])
-                {
-                    closestNodes[1] = closestNodes[0];
-                    closestDistances[1] = closestDistances[0];
-                    closestNodes[0] = internNode;
-                    closestDistances[0] = currentDistance;
-                }
-                else if(currentDistance < closestDistances[1])
-                {
-                    closestNodes[1] = internNode;
-                    closestDistances[1] = currentDistance;
-                }
-            }
-            // Créer le triangle maintenant que les 2 noeuds les plus proches du noeud externNode sont connus
-            elem[iNewTriangle*3] = externNode;
-            elem[iNewTriangle*3+1] = closestNodes[0];
-            elem[iNewTriangle*3+2] = closestNodes[1];
-            iNewTriangle++;
+            // Nouveau triangle trouvé formé des noeuds: noeudsExt[0], noeudsExt[1] et closestIntNode
+            //printf("iTriangle %d: noeuds (%d %d %d) \t après rotation: (%d %d %d) \n",iTriangle, noeudsExt[0], noeudsExt[1], noeudInt, noeudsExt[0], noeudsExt[1], closestIntNode);
+            //newElem[iTriangle*3+indexNoeudInt] = closestIntNode;
         }
         
-        if(iNewTriangle - startTriangleAirGap != theMotorMesh->nElemDomain[Air_gap])
-        {
-            printf("ERROR: Nombre de nouveaux triangles créés: %d, (expected: %d)  \n", iNewTriangle - startTriangleAirGap, theMotorMesh->nElemDomain[Air_gap]);
-            // je devrais avoir créé autant de triangle que ceux précédemment présent dans le maillage Air_Gap
-        }
 
-    free(noeudsRayonInterne);
-    free(noeudsRayonExterne);
-    
-    
-    
+    }
 }
+
+
+
 
 double motorComputeCouple(motor *theMotor)
 {
@@ -510,9 +460,6 @@ void motorComputeMagneticPotential(motor* theMotor)
     freeFemMeshConverted(theFemMesh);
 } 
 
-//
-// ========= Projet à réaliser ===================
-//
 
 // Pistes d'améliorations:
 // Enlever du number dans la fonction motorMeshToFemMeshConverter

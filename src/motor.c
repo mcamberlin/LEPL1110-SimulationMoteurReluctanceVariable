@@ -752,6 +752,68 @@ double motorComputeCouple(motor *theMotor)
 
 void motorComputeCurrent(motor *theMotor)
 {
+    double js = 8.8464*1e5;               // A / m**2
+    double angle = fmod( theMotor->theta, 2*M_PI); // angle électrique du rotor [rad]
+    //fmod retourne le reste de la division de 2 floats
+    if (0 <= angle && angle < M_PI/3.0)
+    // [0°, 60°[
+    {
+        theMotor->js[Coil_AP] = 0;
+        theMotor->js[Coil_AN] = 0;
+        theMotor->js[Coil_BP] = js;
+        theMotor->js[Coil_BN] = -js;
+        theMotor->js[Coil_CP] = -js;
+        theMotor->js[Coil_CN] = js;
+    } 
+    else if (M_PI/3 <= angle && angle < 2*M_PI/3)
+    // [60°, 120°[
+    {
+        theMotor->js[Coil_AP] = js;
+        theMotor->js[Coil_AN] = -js;
+        theMotor->js[Coil_BP] = 0;
+        theMotor->js[Coil_BN] = 0;
+        theMotor->js[Coil_CP] = -js;
+        theMotor->js[Coil_CN] = js;
+    } 
+    else if (2*M_PI/3 <= angle && angle < M_PI)
+    // [120°, 180°[
+    {
+        theMotor->js[Coil_AP] = js;
+        theMotor->js[Coil_AN] = -js;
+        theMotor->js[Coil_BP] = -js;
+        theMotor->js[Coil_BN] = js;
+        theMotor->js[Coil_CP] = 0;
+        theMotor->js[Coil_CN] = 0;
+    }
+    else if (M_PI <= angle && angle < 4*M_PI/3)
+    // [180°, 240°[
+    {
+        theMotor->js[Coil_AP] = 0;
+        theMotor->js[Coil_AN] = 0;
+        theMotor->js[Coil_BP] = -js;
+        theMotor->js[Coil_BN] = js;
+        theMotor->js[Coil_CP] = js;
+        theMotor->js[Coil_CN] = -js;
+    } 
+    else if (4*M_PI/3 <= angle && angle < 5*M_PI/3)
+    // [240°, 300°[
+    {
+        theMotor->js[Coil_AP] = -js;
+        theMotor->js[Coil_AN] = js;
+        theMotor->js[Coil_BP] = 0;
+        theMotor->js[Coil_BN] = 0;
+        theMotor->js[Coil_CP] = js;
+        theMotor->js[Coil_CN] = -js;
+    } 
+    else if (5*M_PI/3 <= angle && angle < 2*M_PI)
+    {
+        theMotor->js[Coil_AP] = -js;
+        theMotor->js[Coil_AN] = js;
+        theMotor->js[Coil_BP] = js;
+        theMotor->js[Coil_BN] = -js;
+        theMotor->js[Coil_CP] = 0;
+        theMotor->js[Coil_CN] = 0;
+    }
     return;   
 }
 

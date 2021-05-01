@@ -3,7 +3,7 @@
 
 int main(void)
 {  
-    motorMesh *theMotorMesh = motorMeshRead("../data/motor400.txt"); //maillage considéré
+    motorMesh *theMotorMesh = motorMeshRead("../data/motor838.txt"); //maillage considéré
     motor *theMotor = motorCreate(theMotorMesh);
     motorPrintInfos(theMotor);
 

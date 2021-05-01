@@ -490,13 +490,11 @@ void femFullSystemFree(femFullSystem *theSystem)
     free(theSystem);
 }
 
-
 void femFullSystemInit(femFullSystem *mySystem)
 {
     int i,size = mySystem->size;
     for (i=0 ; i < size*(size+1) ; i++) 
         mySystem->B[i] = 0;}
-
 
 void femFullSystemPrint(femFullSystem *mySystem)
 {
@@ -556,6 +554,10 @@ void femFullSystemAssemble(femFullSystem* mySystem, double *Aloc, double *Bloc, 
             mySystem->A[map[i]][map[j]] += Aloc[i*nLoc+j]; }
     mySystem->B[map[i]] += Bloc[i]; }
 }
+
+
+
+
 
 double* femFullSystemEliminate(femFullSystem *mySystem)
 {
@@ -649,7 +651,6 @@ void femBandSystemPrintInfos(femBandSystem *myBand)
     printf("    Matrix band      : %8d\n",band);
     printf("    Bytes required   : %8d\n",(int)sizeof(double)*size*(band+1));     
 }
-
 
 double femBandSystemGet(femBandSystem* myBandSystem, int myRow, int myCol)
 {
@@ -767,8 +768,6 @@ void femIterativeSolverAssemble(femIterativeSolver* mySolver, double *Aloc, doub
             mySolver->R[myRow] += Aloc[i*nLoc+j]*Uloc[j]; }}
 }
 
-
-
 double *femIterativeSolverEliminate(femIterativeSolver *mySolver)
 {
     mySolver->iter++;
@@ -781,6 +780,9 @@ double *femIterativeSolverEliminate(femIterativeSolver *mySolver)
     mySolver->error = sqrt(error);
     return(mySolver->X);
 }
+
+
+
 
 femDiffusionProblem *femDiffusionCreate(const char *filename, femSolverType solverType, femRenumType renumType)
 {

@@ -5,8 +5,7 @@ typedef int bool;
 #define true 1
 #define false 0
 
-const static motorMesh* theGlobalMotorMesh;
-# define Stator_core 0
+#define Stator_core 0
 #define Rotor_core 8   
 #define Coil_AP 1
 #define Coil_AN 2
@@ -20,6 +19,7 @@ const static motorMesh* theGlobalMotorMesh;
 #define Rotor_air 9
 
 
+const static motorMesh* theGlobalMotorMesh;
 
 void printFemMesh(const femMesh* theFemMesh)
 {
@@ -99,6 +99,7 @@ void printIntArray(const char* name, const int* ptr)
     }
     printf("... ]\n");
 }
+
 //    
 // ========= Fonctions utiles motorComputeMagneticPotential() ===================
 //
@@ -372,6 +373,57 @@ void printIntArray(const char* name, const int* ptr)
         return  (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);
     }
 
+//
+// ========= Fonctions utiles motorComputeCouple() ===================
+//
+
+#define MU_0 12.5663706147*1e-7 //[kg m A−2 s−2] 
+// source: https://fr.wikipedia.org/wiki/Constante_magnétique
+
+/** startRotorGap
+ * @in 
+ * @out
+ * -retourne l'indice du tableau elem à partir duquel le domaine Rotor_gap commence
+ */
+int startRotorGap()
+{
+    int start = 0;
+    for(int i=0; i< Rotor_gap; i++)
+    {
+        start += theGlobalMotorMesh->nElemDomain[i];
+    }
+    return start; 
+}
+
+/** endRotorGap
+ * @in 
+ * @out
+ * -retourne l'indice +1 du tableau elem à partir duquel le domaine Rotor_gap termine 
+ */
+int endRotorGap()
+{
+    return startRotorGap() + theGlobalMotorMesh->nElemDomain[Rotor_gap];    
+}
+
+
+/** computeWidth
+ * @in 
+ * - const int triangleAirGap = numéro d'un triangle situé dans le domaine Rotor_gap
+ * @out
+ * - retourne la largeur de la bande Rotor_gap
+ */
+double computeWidth(const int triangleRotorGap)
+{
+    int* elem = theGlobalMotorMesh->elem;
+    double rayon1 = radius(elem[triangleRotorGap*3]);
+    double rayon2 = radius(elem[triangleRotorGap*3+1]);
+    double rayon3 = radius(elem[triangleRotorGap*3+2]);
+    double rayonMax = fmax(rayon1, fmax(rayon2, rayon3));
+    double rayonMin = fmin(rayon1, fmin(rayon2, rayon3));
+    //printf("RayonMin : %f, RayonMax : %f, Largeur : %f \n", rayonMin ,rayonMax, rayonMax-rayonMin);
+    return rayonMax-rayonMin;
+}
+
 
 //
 // ========= Projet à réaliser ===================
@@ -380,7 +432,7 @@ void printIntArray(const char* name, const int* ptr)
 void motorAdaptMesh(motor *theMotor, double delta)
 {
     motorMesh *theMotorMesh = theMotor->mesh;  
-    theGlobalMotorMesh = theMotorMesh; 
+    theGlobalMotorMesh = theMotorMesh;  // mets à jour la variable statique
     
     double* X = theMotorMesh->X;
     double* Y = theMotorMesh->Y;
@@ -388,7 +440,6 @@ void motorAdaptMesh(motor *theMotor, double delta)
     int* nElemDomain = theMotorMesh->nElemDomain;
     double L = theMotor->L;
 
-    
     double x,y;
     for(int i = 0; i < theMotorMesh->nNode; ++i)
     {
@@ -399,7 +450,7 @@ void motorAdaptMesh(motor *theMotor, double delta)
             X[i] = x;
             Y[i] = y; 
         }
-    }
+    }  
     theMotor->theta += delta;
     
     int startTriangleAirGap = startAirGap();
@@ -582,7 +633,6 @@ void motorAdaptMesh(motor *theMotor, double delta)
         }
     }
 
-
     // libérer la mémoire allouée dans theNewTriangles
     for(int i =0; i<nbNewTriangles;i++)
     {
@@ -591,12 +641,113 @@ void motorAdaptMesh(motor *theMotor, double delta)
     free(theNewTriangles);   
 }
 
-
-
-
+/** motorComputeCouple
+ * inspirée de:
+ * - la solution du devoir 4 Poisson disponible sur https://www.youtube.com/watch?v=580gEIVVKe8
+ * - la solution du devoir 2 Inertial Gear 
+ */
 double motorComputeCouple(motor *theMotor)
 {
-    return 1e-8;
+    double L = theMotor->L;   
+    motorMesh* theMotorMesh = theMotor->mesh;
+    theGlobalMotorMesh = theMotorMesh;
+    
+    double* a = theMotor->a;
+    int* elem = theMotorMesh->elem;
+        
+    int startTriangleRotorGap = startRotorGap();
+    int endTriangleRotorGap = endRotorGap();
+
+    double d = computeWidth(startTriangleRotorGap);
+
+    femMesh* theFemMesh = motorMeshToFemMeshConverter(theMotorMesh);
+    femIntegration* theRule = femIntegrationCreate(3,FEM_TRIANGLE); // règle d'intégration de Hammer à 3 points
+    femDiscrete* theSpace = femDiscreteCreate(3,FEM_TRIANGLE);      // élément triangulaire bilinéaire
+
+ 
+    double x[3];
+    double y[3];
+    int map[3];
+    double Jacobien;
+
+    double xsi;    
+    double eta;    
+    double weight;
+    
+    double phi[3],dphidxsi[3],dphideta[3],dphidx[3],dphidy[3];
+    
+    double xLoc[theRule->n]; // Abscises des points d'intégration
+    double yLoc[theRule->n]; // Oordonnées des points d'intégration
+    double weightsAjusted[theRule->n];
+    
+    double dxdxsi;          double dydxsi;
+    double dxdeta;          double dydeta;
+    double jac;
+
+    double r;           double theta;
+    double dxdr;        double dxdtheta;  
+    double dydr;        double dydtheta;
+    double dadr;        double dadtheta;
+
+    double couple = 0.0;
+
+    for (int iTriangle = startTriangleRotorGap; iTriangle < endTriangleRotorGap; iTriangle++) 
+    // Parcourir tous les éléments dans Air_Gap
+    {
+        myFemMeshLocal(theFemMesh, iTriangle, map, x, y); 
+        Jacobien = fabs( (x[1]-x[0])*(y[2]-y[0]) - (y[1]-y[0])*(x[2]-x[0]) ); 
+        // J = abs( (X2-X1).(Y3-Y1) - (Y2-Y1).(X3-X1) )
+
+        for (int iInteg = 0; iInteg < theRule->n; iInteg++) 
+        {    
+
+            xsi    = theRule->xsi[iInteg];
+            eta    = theRule->eta[iInteg];
+            weight = theRule->weight[iInteg]; 
+
+            //Points d'intégrations
+            xLoc[iInteg] = x[0] * (1- xsi - eta) + x[1] * xsi + x[2] * eta;
+            yLoc[iInteg] = y[0] * (1- xsi - eta) + y[1] * xsi + y[2] * eta;
+            //Poids ajustés
+            weightsAjusted[iInteg] = theRule->weight[iInteg] * Jacobien;
+            //Calcul intermédiaire de l'intégrale
+            //I += weightsAjusted[iInteg] * f(xLoc[iInteg], yLoc[iInteg]);
+ 
+            femDiscretePhi2(theSpace,xsi,eta,phi);
+            femDiscreteDphi2(theSpace,xsi,eta,dphidxsi,dphideta);
+            dxdxsi = 0.0;         dxdeta = 0.0;
+            dydxsi = 0.0;         dydeta = 0.0;
+            for (int i = 0; i < theSpace->n; i++) 
+            {  
+                dxdxsi += x[i]*dphidxsi[i];       
+                dxdeta += x[i]*dphideta[i];   
+                dydxsi += y[i]*dphidxsi[i];   
+                dydeta += y[i]*dphideta[i]; 
+            }
+
+            jac = fabs(dxdxsi * dydeta - dxdeta * dydxsi);
+            for (int i = 0; i < theSpace->n; i++) 
+            {    
+                dphidx[i] = (dphidxsi[i] * dydeta - dphideta[i] * dydxsi) / jac;       
+                dphidy[i] = (dphideta[i] * dxdxsi - dphidxsi[i] * dxdeta) / jac; 
+            }   
+            
+            r = sqrt(xLoc[iInteg]*xLoc[iInteg] + yLoc[iInteg]*yLoc[iInteg]);
+                                        theta = atan2(yLoc[iInteg],xLoc[iInteg]);
+            dxdr = cos(theta);          dxdtheta = -r*sin(theta); 
+            dydr = sin(theta);          dydtheta = r*cos(theta);
+            dadr = 0.0;                 dadtheta = 0.0;
+            for (int i = 0; i < theSpace->n; i++) 
+            { 
+                dadtheta += a[map[i]] * (dphidx[i] * dxdtheta + dphidy[i] * dydtheta);
+                dadr += a[map[i]] * (dphidx[i] * dxdr + dphidy[i] * dydr);
+            }           
+            couple +=  dadr * dadtheta * weightsAjusted[iInteg];                           
+        }
+    } 
+    couple = (-L/(MU_0 * d) ) *couple ; 
+    //printf("Couple : %f [Nm]\n", couple);
+    return couple;
 }
 
 void motorComputeCurrent(motor *theMotor)
@@ -605,13 +756,7 @@ void motorComputeCurrent(motor *theMotor)
 }
 
 /** motorComputeMagneticPotential
- * @in 
- * - motor* theMotor = la structure représentant le moteur étudié
- * @out 
- * -> rempli motor->mesh->a par le potentiel magnétique obtenu en résolvant l'équation de Poisson
- *  en tout point du maillage 
- * 
- * NB : inspirée de la solution du devoir 4 disponible sur https://www.youtube.com/watch?v=580gEIVVKe8.
+ * inspirée de la solution du devoir 4 disponible sur https://www.youtube.com/watch?v=580gEIVVKe8.
  */
 void motorComputeMagneticPotential(motor* theMotor)
 {
@@ -655,7 +800,7 @@ void motorComputeMagneticPotential(motor* theMotor)
                 dydxsi += y[i]*dphidxsi[i];   
                 dydeta += y[i]*dphideta[i]; 
             }
-            double jac = dxdxsi * dydeta - dxdeta * dydxsi;
+            double jac = fabs(dxdxsi * dydeta - dxdeta * dydxsi);
             for (i = 0; i < theSpace->n; i++) 
             {    
                 dphidx[i] = (dphidxsi[i] * dydeta - dphideta[i] * dydxsi) / jac;       
@@ -677,8 +822,8 @@ void motorComputeMagneticPotential(motor* theMotor)
         }
     } 
 
-     for (iEdge= 0; iEdge < theEdges->nEdge; iEdge++) 
-     {      
+    for (iEdge= 0; iEdge < theEdges->nEdge; iEdge++) 
+    {      
         if (theEdges->edges[iEdge].elem[1] < 0) 
         {  
             for (i = 0; i < 2; i++) 
@@ -692,9 +837,13 @@ void motorComputeMagneticPotential(motor* theMotor)
     femFullSystemEliminate(theSystem);
     theMotor->a = theSystem->B;
 
+    // libérer toutes les mémoires allouées:
     freeFemMeshConverted(theFemMesh);
+    
+    //femEdgesFree(theEdges);
+    //femFullSystemFree(theSystem);
+    //femIntegrationFree(theRule);
+    //femDiscreteFree(theSpace);  
+      
 } 
 
-// Pistes d'améliorations:
-// Pour ajuster les noeuds dans moving_nodes, comme ce sont les domaines 8,9 et 10 on
-// peut éviter de passer sur l'intégralité des noeuds mais uniquement sur ceux la.

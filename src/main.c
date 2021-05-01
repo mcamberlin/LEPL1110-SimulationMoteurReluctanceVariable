@@ -3,7 +3,7 @@
 
 int main(void)
 {  
-    motorMesh *theMotorMesh = motorMeshRead("../data/motor838.txt"); //maillage considéré
+    motorMesh *theMotorMesh = motorMeshRead("../data/motor400.txt"); //maillage considéré
     motor *theMotor = motorCreate(theMotorMesh);
     motorPrintInfos(theMotor);
 
@@ -33,7 +33,7 @@ int main(void)
 
     double 	theDiscreteTime = 0.0;
     double 	theStartingTime = 0.0;
-    double  theTimeStep  = 0.01; //0.2; // 0.1;
+    double  theTimeStep  = 0.01; //0.05; // 0.1;
     double  theStop = 0;
     double  omega = 1.0;
     int     thePlotMode = 1;
@@ -57,7 +57,7 @@ int main(void)
         double theTime = (glfwGetTime() - theStartingTime) * 5;   
         
         //  Pour ne pas figer le resultat a un temps, commenter la ligne ci-dessous       
-        if (theTime >= theStop) theTime = theStop;
+        //if (theTime >= theStop) theTime = theStop;
 
          
         if (action == 'K') thePlotMode = 0;

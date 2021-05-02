@@ -823,60 +823,6 @@ void motorComputeCurrent(motor *theMotor)
     
     return;   
 }
-/*
-void motorComputeCurrent(motor *theMotor)
-{
-    double js = 8.8464*1e5;
-    double thetaSimplified = fmod(theMotor->theta, M_PI);
-    double offset = 0;
-    if (0-offset <= thetaSimplified && thetaSimplified < M_PI/6-offset)
-    {
-        theMotor->js[Coil_AP] = -js;
-        theMotor->js[Coil_AN] = js;
-        theMotor->js[Coil_BP] = js;
-        theMotor->js[Coil_BN] = -js;
-        theMotor->js[Coil_CP] = -js;
-        theMotor->js[Coil_CN] = js;
-    } 
-    else if (M_PI/6-offset <= thetaSimplified && thetaSimplified < 2*M_PI/6-offset){
-        theMotor->js[Coil_AP] = js;
-        theMotor->js[Coil_AN] = -js;
-        theMotor->js[Coil_BP] = -js;
-        theMotor->js[Coil_BN] = js;
-        theMotor->js[Coil_CP] = -js;
-        theMotor->js[Coil_CN] = js;
-    } else if (M_PI/6-offset <= thetaSimplified && thetaSimplified < 3*M_PI/6-offset){
-        theMotor->js[Coil_AP] = -js;
-        theMotor->js[Coil_AN] = js;
-        theMotor->js[Coil_BP] = -js;
-        theMotor->js[Coil_BN] = js;
-        theMotor->js[Coil_CP] = js;
-        theMotor->js[Coil_CN] = -js;
-    } else if (3*M_PI/6-offset <= thetaSimplified && thetaSimplified < 4*M_PI/6-offset){
-        theMotor->js[Coil_AP] = -js;
-        theMotor->js[Coil_AN] = js;
-        theMotor->js[Coil_BP] = js;
-        theMotor->js[Coil_BN] = -js;
-        theMotor->js[Coil_CP] = -js;
-        theMotor->js[Coil_CN] = js;
-    } else if (4*M_PI/6-offset <= thetaSimplified && thetaSimplified < 5*M_PI/6-offset){
-        theMotor->js[Coil_AP] = js;
-        theMotor->js[Coil_AN] = -js;
-        theMotor->js[Coil_BP] = -js;
-        theMotor->js[Coil_BN] = js;
-        theMotor->js[Coil_CP] = -js;
-        theMotor->js[Coil_CN] = js;
-    } else if (5*M_PI/6-offset <= thetaSimplified && thetaSimplified < M_PI-offset){
-        theMotor->js[Coil_AP] = -js;
-        theMotor->js[Coil_AN] = js;
-        theMotor->js[Coil_BP] = -js;
-        theMotor->js[Coil_BN] = js;
-        theMotor->js[Coil_CP] = js;
-        theMotor->js[Coil_CN] = -js;
-    }
-    return;
-}*/
-
 /** motorComputeMagneticPotential
  * inspirée de la solution du devoir 4 disponible sur https://www.youtube.com/watch?v=580gEIVVKe8.
  */

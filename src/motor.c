@@ -750,85 +750,132 @@ double motorComputeCouple(motor *theMotor)
     return couple;
 }
 
+
 void motorComputeCurrent(motor *theMotor)
 {
-    double js = 8.8464*1e5;               // A / m**2
+    double js = 8.8464*1e5;                         // [A/m**2]
     double angle = fmod( theMotor->theta, 2*M_PI); // angle électrique du rotor [rad]
     printf("angle : %f° \n", angle*180/M_PI);
-    //fmod retourne le reste de la division de 2 floats
+    angle = fmod( theMotor->theta, M_PI);
+    angle = fabs(angle);
+
+    // placer le rotor entre A et C
     if (0.0 <= angle && angle < M_PI/6.0)
     // [0°, 30°[
     {
+        theMotor->js[Coil_AP] = -js;
+        theMotor->js[Coil_AN] = js;
+        theMotor->js[Coil_BP] = js;
+        theMotor->js[Coil_BN] = -js;
+        theMotor->js[Coil_CP] = 0;
+        theMotor->js[Coil_CN] = 0;
+    } 
+    else if (M_PI/6.0 <= angle && angle < 2*M_PI/6.0)
+    // [30°, 60°[
+    {
+        theMotor->js[Coil_AP] = -js;
+        theMotor->js[Coil_AN] = js;
+        theMotor->js[Coil_BP] = 0.0;
+        theMotor->js[Coil_BN] = 0.0;
+        theMotor->js[Coil_CP] = js;
+        theMotor->js[Coil_CN] = -js;
+    } 
+    else if (2*M_PI/6.0 <= angle && angle < M_PI/2.0)
+    // [60°, 90°[
+    {
+        theMotor->js[Coil_AP] = 0.0;
+        theMotor->js[Coil_AN] = 0.0;
+        theMotor->js[Coil_BP] = -js;
+        theMotor->js[Coil_BN] = js;
+        theMotor->js[Coil_CP] = js;
+        theMotor->js[Coil_CN] = -js;
+    }
+    else if (M_PI/2.0 <= angle && angle < 4*M_PI/6.0)
+    // [120°, 150°[
+    {
+        theMotor->js[Coil_AP] = js;
+        theMotor->js[Coil_AN] = -js;
+        theMotor->js[Coil_BP] = -js;
+        theMotor->js[Coil_BN] = js;
+        theMotor->js[Coil_CP] = 0;
+        theMotor->js[Coil_CN] = 0;
+    } 
+    else if (4*M_PI/6.0 <= angle && angle < 5*M_PI/6.0)
+    // [240°, 300°[
+    {
+        theMotor->js[Coil_AP] = js;
+        theMotor->js[Coil_AN] = -js;
+        theMotor->js[Coil_BP] = 0;
+        theMotor->js[Coil_BN] = 0;
+        theMotor->js[Coil_CP] = -js;
+        theMotor->js[Coil_CN] = js;
+    } 
+    else if (5*M_PI/6.0 <= angle && angle < M_PI)
+    // [150°, 180°[
+    {
         theMotor->js[Coil_AP] = 0;
         theMotor->js[Coil_AN] = 0;
-        theMotor->js[Coil_BP] = -js;
-        theMotor->js[Coil_BN] = js;
-        theMotor->js[Coil_CP] = js;
-        theMotor->js[Coil_CN] = -js;
-
-    } 
-    else if (M_PI/6.0 <= angle && angle < M_PI/2.0)
-    // [30°, 90°[
-    {
-        theMotor->js[Coil_AP] = js;
-        theMotor->js[Coil_AN] = -js;
-        theMotor->js[Coil_BP] = -js;
-        theMotor->js[Coil_BN] = js;
-        theMotor->js[Coil_CP] = 0.0;
-        theMotor->js[Coil_CN] = 0.0;
-    } 
-    else if (M_PI/2.0 <= angle && angle < 5*M_PI/6.0)
-    // [90°, 150°[
-    {
-        theMotor->js[Coil_AP] = js;
-        theMotor->js[Coil_AN] = -js;
-        theMotor->js[Coil_BP] = 0.0;
-        theMotor->js[Coil_BN] = 0.0;
-        theMotor->js[Coil_CP] = -js;
-        theMotor->js[Coil_CN] = js;
-    }
-    else if (5*M_PI/6.0 <= angle && angle < 7*M_PI/6.0)
-    // [150°, 210°[
-    {
-        theMotor->js[Coil_AP] = 0.0;
-        theMotor->js[Coil_AN] = 0.0;
         theMotor->js[Coil_BP] = js;
         theMotor->js[Coil_BN] = -js;
         theMotor->js[Coil_CP] = -js;
         theMotor->js[Coil_CN] = js;
-    } 
-    else if (7*M_PI/6.0 <= angle && angle < 3*M_PI/2.0)
-    // [210°, 270°[
-    {
-        theMotor->js[Coil_AP] = -js;
-        theMotor->js[Coil_AN] = js;
-        theMotor->js[Coil_BP] = js;
-        theMotor->js[Coil_BN] = -js;
-        theMotor->js[Coil_CP] = 0.0;
-        theMotor->js[Coil_CN] = 0.0;
-    } 
-    else if (3*M_PI/2.0 <= angle && angle < 11*M_PI/6.0)
-    // [270°, 330°[
-    {
-        theMotor->js[Coil_AP] = -js;
-        theMotor->js[Coil_AN] = js;
-        theMotor->js[Coil_BP] = 0.0;
-        theMotor->js[Coil_BN] = 0.0;
-        theMotor->js[Coil_CP] = js;
-        theMotor->js[Coil_CN] = -js;
     }
-    else if (11*M_PI/6.0 <= angle && angle < 2*M_PI)
-    // [330°, 360°[
-    {
-        theMotor->js[Coil_AP] = 0.0;
-        theMotor->js[Coil_AN] = 0.0;
-        theMotor->js[Coil_BP] = -js;
-        theMotor->js[Coil_BN] = js;
-        theMotor->js[Coil_CP] = js;
-        theMotor->js[Coil_CN] = -js;
-    }
+    
     return;   
 }
+/*
+void motorComputeCurrent(motor *theMotor)
+{
+    double js = 8.8464*1e5;
+    double thetaSimplified = fmod(theMotor->theta, M_PI);
+    double offset = 0;
+    if (0-offset <= thetaSimplified && thetaSimplified < M_PI/6-offset)
+    {
+        theMotor->js[Coil_AP] = -js;
+        theMotor->js[Coil_AN] = js;
+        theMotor->js[Coil_BP] = js;
+        theMotor->js[Coil_BN] = -js;
+        theMotor->js[Coil_CP] = -js;
+        theMotor->js[Coil_CN] = js;
+    } 
+    else if (M_PI/6-offset <= thetaSimplified && thetaSimplified < 2*M_PI/6-offset){
+        theMotor->js[Coil_AP] = js;
+        theMotor->js[Coil_AN] = -js;
+        theMotor->js[Coil_BP] = -js;
+        theMotor->js[Coil_BN] = js;
+        theMotor->js[Coil_CP] = -js;
+        theMotor->js[Coil_CN] = js;
+    } else if (M_PI/6-offset <= thetaSimplified && thetaSimplified < 3*M_PI/6-offset){
+        theMotor->js[Coil_AP] = -js;
+        theMotor->js[Coil_AN] = js;
+        theMotor->js[Coil_BP] = -js;
+        theMotor->js[Coil_BN] = js;
+        theMotor->js[Coil_CP] = js;
+        theMotor->js[Coil_CN] = -js;
+    } else if (3*M_PI/6-offset <= thetaSimplified && thetaSimplified < 4*M_PI/6-offset){
+        theMotor->js[Coil_AP] = -js;
+        theMotor->js[Coil_AN] = js;
+        theMotor->js[Coil_BP] = js;
+        theMotor->js[Coil_BN] = -js;
+        theMotor->js[Coil_CP] = -js;
+        theMotor->js[Coil_CN] = js;
+    } else if (4*M_PI/6-offset <= thetaSimplified && thetaSimplified < 5*M_PI/6-offset){
+        theMotor->js[Coil_AP] = js;
+        theMotor->js[Coil_AN] = -js;
+        theMotor->js[Coil_BP] = -js;
+        theMotor->js[Coil_BN] = js;
+        theMotor->js[Coil_CP] = -js;
+        theMotor->js[Coil_CN] = js;
+    } else if (5*M_PI/6-offset <= thetaSimplified && thetaSimplified < M_PI-offset){
+        theMotor->js[Coil_AP] = -js;
+        theMotor->js[Coil_AN] = js;
+        theMotor->js[Coil_BP] = -js;
+        theMotor->js[Coil_BN] = js;
+        theMotor->js[Coil_CP] = js;
+        theMotor->js[Coil_CN] = -js;
+    }
+    return;
+}*/
 
 /** motorComputeMagneticPotential
  * inspirée de la solution du devoir 4 disponible sur https://www.youtube.com/watch?v=580gEIVVKe8.

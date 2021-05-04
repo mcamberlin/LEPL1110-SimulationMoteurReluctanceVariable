@@ -426,33 +426,33 @@ void printIntArray(const char* name, const int* ptr)
 //
 // ========= Fonctions utiles motorComputeCoupleBandSolver() ===================
 //
-femDiffusionProblem * myFemDiffusionCreate(femMesh* theFemMesh)
-{    
-    femDiffusionProblem *theProblem = malloc(sizeof(femDiffusionProblem));
-    theProblem->mesh  = theFemMesh;
-    theProblem->space = femDiscreteCreate(3,FEM_TRIANGLE); // utilisation de triangle
-    theProblem->rule = femIntegrationCreate(3,FEM_TRIANGLE); // règle de Hammer à 3 points
-    theProblem->size = theFemMesh->nNode;
-    theProblem->sizeLoc = theProblem->mesh->nLocalNode;
-    femMeshRenumber(theProblem->mesh,FEM_XNUM); // renumérotation selon X
-    theProblem->sourceValue = 1.0;
-    theProblem->dirichletValue = 0.0;
-    theProblem->dirichlet = calloc(theProblem->size, sizeof(int));    
-    femEdges *theEdges = femEdgesCreate(theProblem->mesh);
-    for (int i = 0; i < theEdges->nEdge; i++) 
-    {      
-        if (theEdges->edges[i].elem[1] < 0) 
-        {       
-            theProblem->dirichlet[theEdges->edges[i].node[0]] = 1; 
-            theProblem->dirichlet[theEdges->edges[i].node[1]] = 1; 
+    femDiffusionProblem * myFemDiffusionCreate(femMesh* theFemMesh)
+    {    
+        femDiffusionProblem *theProblem = malloc(sizeof(femDiffusionProblem));
+        theProblem->mesh  = theFemMesh;
+        theProblem->space = femDiscreteCreate(3,FEM_TRIANGLE);      // utilisation de triangle
+        theProblem->rule = femIntegrationCreate(3,FEM_TRIANGLE);    // règle de Hammer à 3 points
+        theProblem->size = theFemMesh->nNode;
+        theProblem->sizeLoc = theProblem->mesh->nLocalNode;
+        femMeshRenumber(theProblem->mesh,FEM_XNUM);                 // renumérotation selon X
+        theProblem->sourceValue = 1.0;    
+        theProblem->dirichletValue = 0.0;                           // valeur imposée sur la frontière est de 0
+        theProblem->dirichlet = calloc(theProblem->size, sizeof(int));    
+        femEdges *theEdges = femEdgesCreate(theProblem->mesh);
+        for (int i = 0; i < theEdges->nEdge; i++) 
+        {      
+            if (theEdges->edges[i].elem[1] < 0) 
+            {       
+                theProblem->dirichlet[theEdges->edges[i].node[0]] = 1; 
+                theProblem->dirichlet[theEdges->edges[i].node[1]] = 1; 
+            }
         }
+        femEdgesFree(theEdges);
+        int band = femMeshComputeBand(theProblem->mesh);
+        theProblem->solver = femSolverBandCreate(theProblem->size, theProblem->sizeLoc,band); 
+        theProblem->soluce = calloc(theProblem->size,sizeof(double));
+        return theProblem;
     }
-    femEdgesFree(theEdges);
-    int band = femMeshComputeBand(theProblem->mesh);
-    theProblem->solver = femSolverBandCreate(theProblem->size, theProblem->sizeLoc,band); 
-    theProblem->soluce = calloc(theProblem->size,sizeof(double));
-    return theProblem;
-}
 
 
 //
@@ -764,13 +764,11 @@ double motorComputeCouple(motor *theMotor)
             
             r = sqrt(xLoc[iInteg]*xLoc[iInteg] + yLoc[iInteg]*yLoc[iInteg]);
                                         theta = atan2(yLoc[iInteg],xLoc[iInteg]);
-            dxdr = cos(theta);          dxdtheta = -r*sin(theta); 
-            dydr = sin(theta);          dydtheta = r*cos(theta);
             dadr = 0.0;                 dadtheta = 0.0;
             for (int i = 0; i < theSpace->n; i++) 
             { 
-                dadtheta += a[map[i]] * (dphidx[i] * dxdtheta + dphidy[i] * dydtheta);
-                dadr += a[map[i]] * (dphidx[i] * dxdr + dphidy[i] * dydr);
+                dadtheta += a[map[i]] * (dphidx[i] * -r*sin(theta) + dphidy[i] * r*cos(theta));
+                dadr += a[map[i]] * (dphidx[i] * cos(theta) + dphidy[i] * sin(theta));
             }           
             couple +=  dadr * dadtheta * weightsAjusted[iInteg];                           
         }
@@ -1051,4 +1049,17 @@ void motorComputeMagneticPotential(motor* theMotor)
     // libérer toutes les mémoires allouées:
     freeFemMeshConverted(theFemMesh);
     //femDiffusionFree(theProblem);
+}
+
+void motorFree(motor *theMotor)
+{
+    free(theMotor->mesh);
+    free(theMotor->a);
+    free(theMotor->movingNodes);
+    free(theMotor->js);
+    free(theMotor->mu);
+    free((void*) theMotor->hystereticCurveH);
+    free((void*) theMotor->hystereticCurveB);
+    free(theMotor);
+    return;
 }

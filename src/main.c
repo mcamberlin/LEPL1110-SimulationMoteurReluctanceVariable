@@ -10,10 +10,9 @@
 
 int main(void)
 {  
-
     motorMesh *theMotorMesh = motorMeshRead("../data/motor1667.txt"); //maillage considéré
     motor *theMotor = motorCreate(theMotorMesh);
-    motorPrintInfos(theMotor);
+    //motorPrintInfos(theMotor);
 
     femMesh *theStator       = motorDomainCreate(theMotorMesh,0);
     femMesh *theRotor        = motorDomainCreate(theMotorMesh,8);
@@ -40,7 +39,7 @@ int main(void)
                                     "    H    : Display or hide keyboard shortcuts \n"
                                     "    E    : Change message mode: basic or dynamic parameters \n"
                                     };
-    printf("\n%s\n",theHelpMessage);
+    //printf("\n%s\n",theHelpMessage);
     glfemWindowCreate("EPL1110 : Switched Reluctance Motor",480,480,theMotorMesh->nNode,theMotorMesh->X,theMotorMesh->Y);
     glfemWindowSetHelpMessage(theHelpMessage);                               
  
@@ -61,7 +60,9 @@ int main(void)
     char   theTimeInfos[256];
 
     double Couple;
-
+    double SommeCouple = 0;
+    double CoupleMoyen;
+    printf("iteration;Couple;omega\n");
     do
     {
         glfemWindowUpdate();
@@ -89,6 +90,7 @@ int main(void)
             thePlotMode = 0;
         } 
         if (action == 'S') 
+        // magnetic potential
         {
             thePlotMode = 1;
         }
@@ -216,6 +218,10 @@ int main(void)
             
             //   Calcul du couple
             Couple = motorComputeCouple(theMotor);
+            //printf()
+            SommeCouple += Couple;
+            CoupleMoyen = SommeCouple / theIteration;
+            printf("%d;%7f;%7f\n",theIteration, Couple, omega);
 
             //   Calcul de omega par l'équation de Newton
             omega += Couple * theTimeStep / theMotor->inertia;
@@ -226,7 +232,7 @@ int main(void)
 
             //   Mise a jour des courants dans les inducteurs en fonction de l'angle
             motorComputeCurrent(theMotor);
-            printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); 
+            //printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); 
         }
 
         if( theMessageMode == 0)
@@ -237,8 +243,13 @@ int main(void)
         else
         // affiche les paramètres dynamiques du moteur
         {
-            sprintf(theSpecInfos, "Torque = %.5f[Nm]\tangular speed = %.2f[rad/s]", Couple, theMotor->omega);
+            
+            sprintf(theSpecInfos, "Average Torque = %.5f [Nm]\t Angular Speed = %.2f [rad/s]", CoupleMoyen, theMotor->omega);
+            glfemDrawMessage(theSpecInfos,(double[2]){16.0, 50.0}); 
+
+            sprintf(theSpecInfos, "Torque = %.5f [Nm] \t\t\t Power = %.5f [W]", Couple, Couple * theMotor->omega);
             glfemDrawMessage(theSpecInfos,(double[2]){16.0, 30.0}); 
+
         }
         
         

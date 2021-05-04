@@ -10,9 +10,8 @@
 
 int main(void)
 {  
-    // sélectionner le maillage utilisé
 
-    motorMesh *theMotorMesh = motorMeshRead("../data/motor400.txt"); //maillage considéré
+    motorMesh *theMotorMesh = motorMeshRead("../data/motor1667.txt"); //maillage considéré
     motor *theMotor = motorCreate(theMotorMesh);
     motorPrintInfos(theMotor);
 
@@ -32,6 +31,7 @@ int main(void)
     femMesh *theRotorAir     = motorDomainCreate(theMotorMesh,9);
 
 
+    //choisir quel type de maillage utiliser
     const char theHelpMessage[] = {
                                     "   [esc] : Exit\n"
                                     "    R    : Restart and reset zoom, translations \n"
@@ -47,7 +47,8 @@ int main(void)
 
     double theDiscreteTime = 0.0;
     double theStartingTime = 0.0;
-    double theTimeStep  = 0.1; //0.05; // 0.1;
+    // choose timeStep
+    double theTimeStep  = 0.005; //0.05; // 0.1;
     double theStop = 0;
     double omega = 1.0;
     int    thePlotMode = 1;
@@ -100,7 +101,7 @@ int main(void)
         if(action == 'E')
         {
             theMessageMode = iMessageMode%2;
-            iMessageMode++;
+            (iMessageMode++)%2;
         }
 
         glfemSetColorLine(GLFEM_BLACK);
@@ -121,28 +122,81 @@ int main(void)
 
             glfemSetColor(GLFEM_RED);
             glfemPlotMesh(theRotorGap); 
+           
+            // Bobine en rouge si la densité de courant est positive
+            // Bobine en noir si la densité de courant est négative
+            // Bobine non colorée si la densité de courant est nulle
 
-            /* 
-                /!\ 
-                TO DO: Modifier pour afficher à mesure que le rotor tourne quelles bobines sont alimentées en courant
-            */
-           /*
-            for(int i=1; i<7; i++)
+            // Paire A
+            if(theMotor->js[Coil_AP] > 0)
             {
-                if(theMotor)
+                glfemSetColor(GLFEM_RED);
+                glfemPlotMesh(theCoilAP);
+                glfemSetColor(GLFEM_BLACK);
+                glfemPlotMesh(theCoilAN);
+
             }
-            theMotor->js[Coil_AN] = js;
-            theMotor->js[Coil_BP] = js;
-            theMotor->js[Coil_BN] = -js;
-            theMotor->js[Coil_CP] = 0;
-            theMotor->js[Coil_CN] = 0;
-            */
+            else if (theMotor->js[Coil_AP] < 0)
+            {
+                glfemSetColor(GLFEM_BLACK);
+                glfemPlotMesh(theCoilAP);
+                glfemSetColor(GLFEM_RED);
+                glfemPlotMesh(theCoilAN);
+            }
+            else
+            {
+                glfemSetColor(GLFEM_BACKGROUND);
+                glfemPlotMesh(theCoilAP);
+                glfemPlotMesh(theCoilAN);
+            }
+            
+            // Paire B
+            if(theMotor->js[Coil_BP] > 0)
+            {
+                glfemSetColor(GLFEM_RED);
+                glfemPlotMesh(theCoilBP);
+                glfemSetColor(GLFEM_BLACK);
+                glfemPlotMesh(theCoilBN);
 
-            glfemSetColor(GLFEM_RED);
-            glfemPlotMesh(theCoilAP);
+            }
+            else if (theMotor->js[Coil_BP] < 0)
+            {
+                glfemSetColor(GLFEM_BLACK);
+                glfemPlotMesh(theCoilBP);
+                glfemSetColor(GLFEM_RED);
+                glfemPlotMesh(theCoilBN);
+            }
+            else
+            {
+                glfemSetColor(GLFEM_BACKGROUND);
+                glfemPlotMesh(theCoilBP);
+                glfemPlotMesh(theCoilBN);
+            }
+            
+            // Paire C
+            if(theMotor->js[Coil_CP] > 0)
+            {
+                glfemSetColor(GLFEM_RED);
+                glfemPlotMesh(theCoilCP);
+                glfemSetColor(GLFEM_BLACK);
+                glfemPlotMesh(theCoilCN);
 
-            glfemSetColor(GLFEM_BLACK);
-            glfemPlotMesh(theCoilAN); 
+            }
+            else if (theMotor->js[Coil_CP] < 0)
+            {
+                glfemSetColor(GLFEM_BLACK);
+                glfemPlotMesh(theCoilCP);
+                glfemSetColor(GLFEM_RED);
+                glfemPlotMesh(theCoilCN);
+            }
+            else
+            {
+                glfemSetColor(GLFEM_BACKGROUND);
+                glfemPlotMesh(theCoilCP);
+                glfemPlotMesh(theCoilCN);
+            }
+      
+
         }        
         else if (thePlotMode == 1) 
         // Visualisation du potentiel magnétique sur le rotor et le stator  
@@ -183,7 +237,7 @@ int main(void)
         else
         // affiche les paramètres dynamiques du moteur
         {
-            sprintf(theSpecInfos, "Torque = %.2f[Nm]\tangular speed = %.2f[rad/s]", Couple, theMotor->omega);
+            sprintf(theSpecInfos, "Torque = %.5f[Nm]\tangular speed = %.2f[rad/s]", Couple, theMotor->omega);
             glfemDrawMessage(theSpecInfos,(double[2]){16.0, 30.0}); 
         }
         

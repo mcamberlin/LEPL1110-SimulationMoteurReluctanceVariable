@@ -79,7 +79,7 @@ char glfemGetAction(void)
 // que les lettres communes de AZERTY et QWERTY :-)
 //
 // Il n’y a pas tant de lettres communes (20 lettres). 
-// Dans l’ordre d’apparition : e, r, t, u, i, o, p, s, d, f, g, h, j, k, l, x, c, v, b, n
+// Dans l’ordre d’apparition : e, r, t, u, i, o, p, s, f, g, h, j, k, l, x, c, v, b, n
 //
 
 static void glfemKeyCallback(GLFWwindow* self,
@@ -215,7 +215,7 @@ void glfemDrawMessage(char *message, double pos[2]){
 
     float w = theCurrentWindow->param.res[0];
     float w2 = theCurrentWindow->size[0];
-	  float ratio = w/w2;
+	float ratio = w/w2;
   
     bov_text_t* text = bov_text_new((const GLubyte *)message, GL_STATIC_DRAW);
     text->param =  (bov_text_param_t) {

@@ -120,13 +120,11 @@ void printIntArray(const char* name, const int* ptr)
         theFemMesh->nElem = theMotorMesh->nElem;
         theFemMesh->nNode = theMotorMesh->nNode;
         theFemMesh->nLocalNode = theMotorMesh->nLocalNode;
-        theFemMesh->number = NULL; //Pas besoin de renumérotation jusqu'à présent 
-        // Utilisé pour la renumérotation des noeuds dans le maillage 
-        // sizeof(int)*theFemMesh->nNode); 
-        //for (int i = 0; i < theFemMesh->nNode; i++)
-        //{
-        //    theFemMesh->number[i] = i; 
-        //} 
+        theFemMesh->number = malloc(sizeof(int) * theFemMesh->nNode); 
+        for (int i = 0; i < theFemMesh->nNode; i++)
+        {
+            theFemMesh->number[i] = i; 
+        } 
         return theFemMesh;
     }
 
@@ -377,51 +375,83 @@ void printIntArray(const char* name, const int* ptr)
 // ========= Fonctions utiles motorComputeCouple() ===================
 //
 
-#define MU_0 12.5663706147*1e-7 //[kg m A−2 s−2] 
-// source: https://fr.wikipedia.org/wiki/Constante_magnétique
+    #define MU_0 12.5663706147*1e-7 //[kg m A−2 s−2] 
+    // source: https://fr.wikipedia.org/wiki/Constante_magnétique
 
-/** startRotorGap
- * @in 
- * @out
- * -retourne l'indice du tableau elem à partir duquel le domaine Rotor_gap commence
- */
-int startRotorGap()
-{
-    int start = 0;
-    for(int i=0; i< Rotor_gap; i++)
+    /** startRotorGap
+     * @in 
+     * @out
+     * -retourne l'indice du tableau elem à partir duquel le domaine Rotor_gap commence
+     */
+    int startRotorGap()
     {
-        start += theGlobalMotorMesh->nElemDomain[i];
+        int start = 0;
+        for(int i=0; i< Rotor_gap; i++)
+        {
+            start += theGlobalMotorMesh->nElemDomain[i];
+        }
+        return start; 
     }
-    return start; 
-}
 
-/** endRotorGap
- * @in 
- * @out
- * -retourne l'indice +1 du tableau elem à partir duquel le domaine Rotor_gap termine 
- */
-int endRotorGap()
-{
-    return startRotorGap() + theGlobalMotorMesh->nElemDomain[Rotor_gap];    
-}
+    /** endRotorGap
+     * @in 
+     * @out
+     * -retourne l'indice +1 du tableau elem à partir duquel le domaine Rotor_gap termine 
+     */
+    int endRotorGap()
+    {
+        return startRotorGap() + theGlobalMotorMesh->nElemDomain[Rotor_gap];    
+    }
 
 
-/** computeWidth
- * @in 
- * - const int triangleAirGap = numéro d'un triangle situé dans le domaine Rotor_gap
- * @out
- * - retourne la largeur de la bande Rotor_gap
- */
-double computeWidth(const int triangleRotorGap)
-{
-    int* elem = theGlobalMotorMesh->elem;
-    double rayon1 = radius(elem[triangleRotorGap*3]);
-    double rayon2 = radius(elem[triangleRotorGap*3+1]);
-    double rayon3 = radius(elem[triangleRotorGap*3+2]);
-    double rayonMax = fmax(rayon1, fmax(rayon2, rayon3));
-    double rayonMin = fmin(rayon1, fmin(rayon2, rayon3));
-    //printf("RayonMin : %f, RayonMax : %f, Largeur : %f \n", rayonMin ,rayonMax, rayonMax-rayonMin);
-    return rayonMax-rayonMin;
+    /** computeWidth
+     * @in 
+     * - const int triangleAirGap = numéro d'un triangle situé dans le domaine Rotor_gap
+     * @out
+     * - retourne la largeur de la bande Rotor_gap
+     */
+    double computeWidth(const int triangleRotorGap)
+    {
+        int* elem = theGlobalMotorMesh->elem;
+        double rayon1 = radius(elem[triangleRotorGap*3]);
+        double rayon2 = radius(elem[triangleRotorGap*3+1]);
+        double rayon3 = radius(elem[triangleRotorGap*3+2]);
+        double rayonMax = fmax(rayon1, fmax(rayon2, rayon3));
+        double rayonMin = fmin(rayon1, fmin(rayon2, rayon3));
+        //printf("RayonMin : %f, RayonMax : %f, Largeur : %f \n", rayonMin ,rayonMax, rayonMax-rayonMin);
+        return rayonMax-rayonMin;
+    }
+
+
+//
+// ========= Fonctions utiles motorComputeCoupleBandSolver() ===================
+//
+femDiffusionProblem * myFemDiffusionCreate(femMesh* theFemMesh)
+{    
+    femDiffusionProblem *theProblem = malloc(sizeof(femDiffusionProblem));
+    theProblem->mesh  = theFemMesh;
+    theProblem->space = femDiscreteCreate(3,FEM_TRIANGLE); // utilisation de triangle
+    theProblem->rule = femIntegrationCreate(3,FEM_TRIANGLE); // règle de Hammer à 3 points
+    theProblem->size = theFemMesh->nNode;
+    theProblem->sizeLoc = theProblem->mesh->nLocalNode;
+    femMeshRenumber(theProblem->mesh,FEM_XNUM); // renumérotation selon X
+    theProblem->sourceValue = 1.0;
+    theProblem->dirichletValue = 0.0;
+    theProblem->dirichlet = calloc(theProblem->size, sizeof(int));    
+    femEdges *theEdges = femEdgesCreate(theProblem->mesh);
+    for (int i = 0; i < theEdges->nEdge; i++) 
+    {      
+        if (theEdges->edges[i].elem[1] < 0) 
+        {       
+            theProblem->dirichlet[theEdges->edges[i].node[0]] = 1; 
+            theProblem->dirichlet[theEdges->edges[i].node[1]] = 1; 
+        }
+    }
+    femEdgesFree(theEdges);
+    int band = femMeshComputeBand(theProblem->mesh);
+    theProblem->solver = femSolverBandCreate(theProblem->size, theProblem->sizeLoc,band); 
+    theProblem->soluce = calloc(theProblem->size,sizeof(double));
+    return theProblem;
 }
 
 
@@ -753,13 +783,12 @@ double motorComputeCouple(motor *theMotor)
 
 void motorComputeCurrent(motor *theMotor)
 {
-    double js = 8.8464*1e5;                         // [A/m**2]
+    double js = 8.8464*1e5;                         // densité de courant [A/m**2]
     double angle = fmod( theMotor->theta, 2*M_PI); // angle électrique du rotor [rad]
-    printf("angle : %f° \n", angle*180/M_PI);
+    //printf("angle : %f° \n", angle*180/M_PI);
     angle = fmod( theMotor->theta, M_PI);
     angle = fabs(angle);
 
-    // placer le rotor entre A et C
     if (0.0 <= angle && angle < M_PI/6.0)
     // [0°, 30°[
     {
@@ -791,7 +820,7 @@ void motorComputeCurrent(motor *theMotor)
         theMotor->js[Coil_CN] = -js;
     }
     else if (M_PI/2.0 <= angle && angle < 4*M_PI/6.0)
-    // [120°, 150°[
+    // [90°, 120°[
     {
         theMotor->js[Coil_AP] = js;
         theMotor->js[Coil_AN] = -js;
@@ -801,7 +830,7 @@ void motorComputeCurrent(motor *theMotor)
         theMotor->js[Coil_CN] = 0;
     } 
     else if (4*M_PI/6.0 <= angle && angle < 5*M_PI/6.0)
-    // [240°, 300°[
+    // [120°, 150°[
     {
         theMotor->js[Coil_AP] = js;
         theMotor->js[Coil_AN] = -js;
@@ -823,10 +852,12 @@ void motorComputeCurrent(motor *theMotor)
     
     return;   
 }
-/** motorComputeMagneticPotential
- * inspirée de la solution du devoir 4 disponible sur https://www.youtube.com/watch?v=580gEIVVKe8.
+
+/** motorComputeMagneticPotentialFullSolver
+ * inspirée de la solution du devoir 4 Poisson disponible sur https://www.youtube.com/watch?v=580gEIVVKe8.
+ * utilisation d'une élimination gaussienne
  */
-void motorComputeMagneticPotential(motor* theMotor)
+void motorComputeMagneticPotentialFullSolver(motor* theMotor)
 {
     motorMesh* theMotorMesh = theMotor->mesh;
     double* js = theMotor->js;
@@ -889,7 +920,7 @@ void motorComputeMagneticPotential(motor* theMotor)
             }
         }
     } 
-
+    
     for (iEdge= 0; iEdge < theEdges->nEdge; iEdge++) 
     {      
         if (theEdges->edges[iEdge].elem[1] < 0) 
@@ -911,7 +942,113 @@ void motorComputeMagneticPotential(motor* theMotor)
     //femEdgesFree(theEdges);
     //femFullSystemFree(theSystem);
     //femIntegrationFree(theRule);
-    //femDiscreteFree(theSpace);  
-      
-} 
+    //femDiscreteFree(theSpace);      
+}   
 
+/** motorComputeMagneticPotential
+ * inspirée de la solution du devoir 5 BandSolver
+ * utilisation d'un solver bande
+ */
+void motorComputeMagneticPotential(motor* theMotor)
+{
+    motorMesh* theMotorMesh = theMotor->mesh;
+    double* js = theMotor->js;
+    double* mu = theMotor->mu;
+    int* domain = theMotorMesh->domain;
+    int nTriangles = theMotorMesh->nElem;
+    int nNode = theMotorMesh->nNode;
+
+    femMesh* theFemMesh = motorMeshToFemMeshConverter(theMotorMesh);
+    femDiffusionProblem* theProblem = myFemDiffusionCreate(theFemMesh);
+    //femSolverPrintInfos(theProblem->solver);
+
+    femIntegration *theRule = theProblem->rule;
+    femDiscrete *theSpace = theProblem->space;
+    femSolver *theSolver = theProblem->solver;
+
+    int *number = theProblem->mesh->number;
+    double source = theProblem->sourceValue;
+    double dirichlet = theProblem->dirichletValue;
+
+ 
+    double phi[3],dphidxsi[3],dphideta[3],dphidx[3],dphidy[3];
+    double Xloc[3],Yloc[3], Uloc[3];
+    int iTriangle,iInteg,iEdge,i,j,map[3],ctr[3];
+    
+    
+    double **A = theSolver->local->A;
+    double *Aloc = theSolver->local->A[0];
+    double *Bloc = theSolver->local->B;
+    
+    for (iTriangle = 0; iTriangle < theMotorMesh->nElem; iTriangle++) 
+    {
+        for (i = 0; i < theSpace->n; i++)
+        {
+            Bloc[i] = 0;
+        }      
+        for (i = 0; i < (theSpace->n)*(theSpace->n); i++)
+        {
+            Aloc[i] = 0;
+        } 
+        
+        femDiffusionMeshLocal(theProblem,iTriangle,map,ctr,Xloc,Yloc,Uloc);  
+        
+        for (iInteg=0; iInteg < theRule->n; iInteg++) 
+        {    
+            double xsi    = theRule->xsi[iInteg];
+            double eta    = theRule->eta[iInteg];
+            double weight = theRule->weight[iInteg];  
+            femDiscretePhi2(theSpace,xsi,eta,phi);
+            femDiscreteDphi2(theSpace,xsi,eta,dphidxsi,dphideta);
+            double dxdxsi = 0;
+            double dxdeta = 0;
+            double dydxsi = 0; 
+            double dydeta = 0;
+            for (i = 0; i < theSpace->n; i++) 
+            {    
+                dxdxsi += Xloc[i]*dphidxsi[i];       
+                dxdeta += Xloc[i]*dphideta[i];   
+                dydxsi += Yloc[i]*dphidxsi[i];   
+                dydeta += Yloc[i]*dphideta[i]; 
+            }
+            double jac = fabs(dxdxsi * dydeta - dxdeta * dydxsi);
+            for (i = 0; i < theSpace->n; i++) 
+            {    
+                dphidx[i] = (dphidxsi[i] * dydeta - dphideta[i] * dydxsi) / jac;       
+                dphidy[i] = (dphideta[i] * dxdxsi - dphidxsi[i] * dxdeta) / jac; 
+            }            
+            for (i = 0; i < theSpace->n; i++) 
+            { 
+                for(j = 0; j < theSpace->n; j++) 
+                {
+                    A[i][j] += (1.0 / mu[domain[iTriangle]]) * (dphidx[i] * dphidx[j] + dphidy[i] * dphidy[j]) * jac * weight; 
+                    // La permabilité dépend des sous-domaines. Il faut donc d'abord déterminer à quel sous-domain appartient le ième triangle (iTriangle).
+                    // Il faut ensuite diviser par sa perméabilité pour correspondre avec l'équation à résoudre 
+                }
+            }                                                                                            
+            for (i = 0; i < theSpace->n; i++) 
+            {
+                Bloc[i] += js[domain[iTriangle]] * phi[i] * jac * source * weight; 
+            }
+        }
+        for (i = 0; i < theSpace->n; i++) 
+        {
+            if (ctr[i] == 1) 
+            {
+                femFullSystemConstrain(theSolver->local,i,dirichlet);
+            }
+        }    
+        femSolverAssemble(theSolver,Aloc,Bloc,Uloc,map,theSpace->n); 
+    } 
+ 
+    double *soluce = femSolverEliminate(theSolver);
+    for (i = 0; i < theProblem->size; i++)
+    {
+        theProblem->soluce[i] += soluce[number[i]];
+        theMotor->a[i] = theProblem->soluce[i];
+    }
+    
+    // libérer toutes les mémoires allouées:
+    freeFemMeshConverted(theFemMesh);
+    //femDiffusionFree(theProblem);
+}

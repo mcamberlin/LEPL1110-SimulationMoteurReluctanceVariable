@@ -1,8 +1,17 @@
 #include "glfem.h"
 #include "motor.h"
 
+#define Coil_AP 1
+#define Coil_AN 2
+#define Coil_BP 3
+#define Coil_BN 4
+#define Coil_CP 5
+#define Coil_CN 6
+
 int main(void)
 {  
+    // sélectionner le maillage utilisé
+
     motorMesh *theMotorMesh = motorMeshRead("../data/motor400.txt"); //maillage considéré
     motor *theMotor = motorCreate(theMotorMesh);
     motorPrintInfos(theMotor);
@@ -10,8 +19,12 @@ int main(void)
     femMesh *theStator       = motorDomainCreate(theMotorMesh,0);
     femMesh *theRotor        = motorDomainCreate(theMotorMesh,8);
 
-    femMesh *theCoilPositive = motorDomainCreate(theMotorMesh,1);
-    femMesh *theCoilNegative = motorDomainCreate(theMotorMesh,2);
+    femMesh *theCoilAP = motorDomainCreate(theMotorMesh,1);
+    femMesh *theCoilAN = motorDomainCreate(theMotorMesh,2);
+    femMesh *theCoilBP = motorDomainCreate(theMotorMesh,3);
+    femMesh *theCoilBN = motorDomainCreate(theMotorMesh,4);
+    femMesh *theCoilCP = motorDomainCreate(theMotorMesh,5);
+    femMesh *theCoilCN = motorDomainCreate(theMotorMesh,6);
 
     femMesh *theRotorGap     = motorDomainCreate(theMotorMesh,10);
     femMesh *theGap          = motorDomainCreate(theMotorMesh,11);
@@ -20,63 +33,82 @@ int main(void)
 
 
     const char theHelpMessage[] = {
-        "   [esc] : Exit\n"
-        "    R    : Restart and reset zoom, translations \n"
-        "    S    : Show magnetic potential on rotor and stator \n"
-        "    K    : Domains with colors \n"
-        "    H    : Display or hide keyboard shortcuts \n"
-        };
+                                    "   [esc] : Exit\n"
+                                    "    R    : Restart and reset zoom, translations \n"
+                                    "    S    : Show magnetic potential on rotor and stator \n"
+                                    "    K    : Domains with colors \n"
+                                    "    H    : Display or hide keyboard shortcuts \n"
+                                    "    E    : Change message mode: basic or dynamic parameters \n"
+                                    };
     printf("\n%s\n",theHelpMessage);
     glfemWindowCreate("EPL1110 : Switched Reluctance Motor",480,480,theMotorMesh->nNode,theMotorMesh->X,theMotorMesh->Y);
     glfemWindowSetHelpMessage(theHelpMessage);                               
  
 
-    double 	theDiscreteTime = 0.0;
-    double 	theStartingTime = 0.0;
-    double  theTimeStep  = 0.01; //0.05; // 0.1;
-    double  theStop = 0;
-    double  omega = 1.0;
-    int     thePlotMode = 1;
-    int 	theIteration = 0;
-    char    theAction = 'K';
-    char    theMessage[256];   
-    
+    double theDiscreteTime = 0.0;
+    double theStartingTime = 0.0;
+    double theTimeStep  = 0.1; //0.05; // 0.1;
+    double theStop = 0;
+    double omega = 1.0;
+    int    thePlotMode = 1;
+    int    theIteration = 0;
+
+    int    iMessageMode = 0;
+    int    theMessageMode = 0; 
+    char   theMessage[256];  
+    char   theSpecInfos[256];  
+    char   theTimeInfos[256];
+
+    double Couple;
+
     do
     {
         glfemWindowUpdate();
         char action = glfemGetAction(); 
 
-//
-//  Gestion de l'animation en temps reel
-//    - "theTime" est le temps courant de l'application (sauf si il a été remis a zero :-)
-//    - Le facteur entre le temps réel et le temps de l'application permet de controler la vitesse d'execution
-//    - Si necessaire, une nouvelle iteration discrete est calculee...
-//      C'est donc ici que se trouve "virtuellement" la boucle sur toutes les iterations temporelles
-//
+        //
+        //  Gestion de l'animation en temps reel
+        //  ------------------------------------
+        //    - "theTime" est le temps courant de l'application (sauf si il a été remis a zero)
+        //    - Le facteur entre le temps réel et le temps de l'application permet de controler la vitesse d'execution
+        //    - Si necessaire, une nouvelle iteration discrete est calculee...
+        //      C'est donc ici que se trouve "virtuellement" la boucle sur toutes les iterations temporelles
+        //
 
         double theTime = (glfwGetTime() - theStartingTime) * 5;   
         
-        //  Pour ne pas figer le resultat a un temps, commenter la ligne ci-dessous       
+        //  Pour NE PAS figer le resultat a un temps, commenter la ligne ci-dessous       
         //if (theTime >= theStop) theTime = theStop;
 
-         
-        if (action == 'K') thePlotMode = 0;
-        if (action == 'S') thePlotMode = 1;
         
-        if (action == 'R') 
+        // Display modes
+        if (action == 'K')
+        // Domains with colors
+        {
+            thePlotMode = 0;
+        } 
+        if (action == 'S') 
+        {
+            thePlotMode = 1;
+        }
+        if(action == 'R') 
         {
             theStartingTime = glfwGetTime(); 
             theDiscreteTime = 0;
             theStop = 1;
         }
-        
+        if(action == 'E')
+        {
+            theMessageMode = iMessageMode%2;
+            iMessageMode++;
+        }
+
         glfemSetColorLine(GLFEM_BLACK);
         glfemSetColor(GLFEM_BACKGROUND);
         glfemSetLineWidth(0.0001);
         
-        // Pour faire apparaitre les sous-domaines : il est possible de modifier l'affichage
-
         if (thePlotMode == 0) 
+        // Domains with colors
         {
             glfemPlotMesh((femMesh*)theMotorMesh);
 
@@ -94,22 +126,32 @@ int main(void)
                 /!\ 
                 TO DO: Modifier pour afficher à mesure que le rotor tourne quelles bobines sont alimentées en courant
             */
+           /*
+            for(int i=1; i<7; i++)
+            {
+                if(theMotor)
+            }
+            theMotor->js[Coil_AN] = js;
+            theMotor->js[Coil_BP] = js;
+            theMotor->js[Coil_BN] = -js;
+            theMotor->js[Coil_CP] = 0;
+            theMotor->js[Coil_CN] = 0;
+            */
+
             glfemSetColor(GLFEM_RED);
-            glfemPlotMesh(theCoilPositive);
+            glfemPlotMesh(theCoilAP);
 
             glfemSetColor(GLFEM_BLACK);
-            glfemPlotMesh(theCoilNegative); 
-        }
-
+            glfemPlotMesh(theCoilAN); 
+        }        
+        else if (thePlotMode == 1) 
         // Visualisation du potentiel magnétique sur le rotor et le stator  
-        if (thePlotMode == 1) 
         {
             glfemSetScale((femMesh*)theMotorMesh,theMotor->a);
             glfemPlotSolution(theRotor,theMotor->a);
             glfemPlotSolution(theStator,theMotor->a); 
         }
-            
-            
+        
         if (theTime > theDiscreteTime) 
         {
             theIteration += 1;
@@ -119,10 +161,10 @@ int main(void)
             motorComputeMagneticPotential(theMotor);
             
             //   Calcul du couple
-            double C = motorComputeCouple(theMotor);
+            Couple = motorComputeCouple(theMotor);
 
             //   Calcul de omega par l'équation de Newton
-            omega += C * theTimeStep / theMotor->inertia;
+            omega += Couple * theTimeStep / theMotor->inertia;
             theMotor->omega = omega;
             
             //   Rotation du rotor et remaillage de la bande glissante
@@ -130,13 +172,21 @@ int main(void)
 
             //   Mise a jour des courants dans les inducteurs en fonction de l'angle
             motorComputeCurrent(theMotor);
-
             printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); 
         }
+
+        if( theMessageMode == 0)
+        {
+            sprintf(theTimeInfos, "Time = %.2f \t iteration = %d\n", theDiscreteTime,theIteration);
+            glfemDrawMessage(theTimeInfos,(double[2]){16.0, 30.0}); 
+        }
+        else
+        // affiche les paramètres dynamiques du moteur
+        {
+            sprintf(theSpecInfos, "Torque = %.2f[Nm]\tangular speed = %.2f[rad/s]", Couple, theMotor->omega);
+            glfemDrawMessage(theSpecInfos,(double[2]){16.0, 30.0}); 
+        }
         
-        sprintf(theMessage,"Time = %.2f iteration = %d",theDiscreteTime,theIteration);
-        sprintf(theMessage, "Entrefer ");
-        glfemDrawMessage(theMessage,(double[2]){16.0, 30.0}); 
         
     } while(!glfemWindowShouldClose());
     

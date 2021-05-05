@@ -12,7 +12,7 @@
 int main(void)
 {  
     printf("================================================== \n");
-    motorMesh *theMotorMesh = motorMeshRead("../data/motor1667.txt"); //maillage considéré
+    motorMesh *theMotorMesh = motorMeshRead("../data/motor400.txt"); //maillage considéré
     motor *theMotor = motorCreate(theMotorMesh);
     //motorPrintInfos(theMotor);
 
@@ -59,12 +59,11 @@ int main(void)
     double theDiscreteTime = 0.0;
     double theStartingTime = 0.0;
     // choose timeStep
-    double theTimeStep  = 0.001; //0.05; // 0.1;
+    double theTimeStep  = 0.005; //0.05; // 0.1;
     double theStop = 0;
     double omega = 1.0;
     int    thePlotMode = 1;
     int    theIteration = 0;
-
     int    iMessageMode = 0;
     int    theMessageMode = 0; 
     char   theMessage[256];  
@@ -246,7 +245,7 @@ int main(void)
             Couple = motorComputeCouple(theMotor);
             SommeCouple += Couple;
             CoupleMoyen = SommeCouple / theIteration;
-            //printf("%d;%7f;%7f;%7f;%7f\n",theIteration, fmod(theMotor->theta * 180/M_PI, 360.0), fmod(theMotor->theta, 2*M_PI), Couple, omega);
+            printf("%d;%7f;%7f;%7f;%7f\n",theIteration, fmod(theMotor->theta * 180/M_PI, 360.0), fmod(theMotor->theta, 2*M_PI), Couple, omega);
 
             //   Calcul de omega par l'équation de Newton
             omega += Couple * theTimeStep / theMotor->inertia;
@@ -257,15 +256,15 @@ int main(void)
 
             //   Mise a jour des courants dans les inducteurs en fonction de l'angle
             motorComputeCurrent(theMotor);
-            printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); 
+            //printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); 
         }
-        /* Utilisé pour faire des graphes semblables
+        //Utilisé pour faire des graphes semblables
         if(omega > 151) //rad/s
         {
             exit(EXIT_SUCCESS);
             return 1;
         }
-        */
+        
 
         if( theMessageMode == 0)
         {
@@ -287,7 +286,7 @@ int main(void)
         
     } while(!glfemWindowShouldClose());
     
-    printf("CPU time : %.5f [sec] \n", (clock() - tic) * 1.0 /CLOCKS_PER_SEC);
+    //printf("CPU time : %.5f [sec] \n", (clock() - tic) * 1.0 /CLOCKS_PER_SEC);
     exit(EXIT_SUCCESS);
     return 0;
   

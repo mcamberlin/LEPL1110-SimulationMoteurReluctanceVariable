@@ -430,8 +430,9 @@ void printIntArray(const char* name, const int* ptr)
     {    
         femDiffusionProblem *theProblem = malloc(sizeof(femDiffusionProblem));
         theProblem->mesh  = theFemMesh;
-        theProblem->space = femDiscreteCreate(3,FEM_TRIANGLE);      // utilisation de triangle
-        theProblem->rule = femIntegrationCreate(3,FEM_TRIANGLE);    // règle de Hammer à 3 points
+        theProblem->space = femDiscreteCreate(3,FEM_TRIANGLE);        // utilisation de triangle
+        theProblem->rule = femIntegrationCreate(3,FEM_TRIANGLE);      // règle de Hammer à 3 points
+        //theProblem->rule = femIntegrationCreate(4,FEM_QUAD);        // règle de Hammer à 4 points
         theProblem->size = theFemMesh->nNode;
         theProblem->sizeLoc = theProblem->mesh->nLocalNode;
         femMeshRenumber(theProblem->mesh,FEM_XNUM);                 // renumérotation selon X
@@ -691,8 +692,8 @@ double motorComputeCouple(motor *theMotor)
     double d = computeWidth(startTriangleRotorGap);
 
     femMesh* theFemMesh = motorMeshToFemMeshConverter(theMotorMesh);
-    femIntegration* theRule = femIntegrationCreate(3,FEM_TRIANGLE); // règle d'intégration de Hammer à 3 points
-    femDiscrete* theSpace = femDiscreteCreate(3,FEM_TRIANGLE);      // élément triangulaire bilinéaire
+    femIntegration* theRule = femIntegrationCreate(3,FEM_TRIANGLE);   // règle d'intégration de Hammer à 3 points
+    femDiscrete* theSpace = femDiscreteCreate(3,FEM_TRIANGLE);          // élément triangulaire bilinéaire
 
  
     double x[3];
@@ -846,8 +847,7 @@ void motorComputeCurrent(motor *theMotor)
         theMotor->js[Coil_BN] = -js;
         theMotor->js[Coil_CP] = -js;
         theMotor->js[Coil_CN] = js;
-    }
-    
+    }    
     return;   
 }
 
@@ -1053,6 +1053,13 @@ void motorComputeMagneticPotential(motor* theMotor)
 
 void motorFree(motor *theMotor)
 {
+    free(theMotor->mesh->elem);
+    free(theMotor->mesh->X );
+    free(theMotor->mesh->Y );
+    free(theMotor->mesh->nElemDomain );
+    free(theMotor->mesh->nameDomain);
+    free(theMotor->mesh->domain);
+
     free(theMotor->mesh);
     free(theMotor->a);
     free(theMotor->movingNodes);

@@ -119,6 +119,8 @@ glfem.h
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/glfem.h
 motor.h
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.h
+time.h
+-
 
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.h
 fem.h

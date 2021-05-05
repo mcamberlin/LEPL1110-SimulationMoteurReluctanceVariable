@@ -1,5 +1,6 @@
 #include "glfem.h"
 #include "motor.h"
+#include <time.h>
 
 #define Coil_AP 1
 #define Coil_AN 2
@@ -10,6 +11,7 @@
 
 int main(void)
 {  
+    printf("================================================== \n");
     motorMesh *theMotorMesh = motorMeshRead("../data/motor1667.txt"); //maillage considéré
     motor *theMotor = motorCreate(theMotorMesh);
     //motorPrintInfos(theMotor);
@@ -30,7 +32,6 @@ int main(void)
     femMesh *theRotorAir     = motorDomainCreate(theMotorMesh,9);
 
 
-    //choisir quel type de maillage utiliser
     const char theHelpMessage[] = {
                                     "   [esc] : Exit\n"
                                     "    R    : Restart and reset zoom, translations \n"
@@ -39,7 +40,18 @@ int main(void)
                                     "    H    : Display or hide keyboard shortcuts \n"
                                     "    E    : Change message mode: basic or dynamic parameters \n"
                                     };
-    //printf("\n%s\n",theHelpMessage);
+    int theSolverMode = 0; 
+    printf("Select the solver to use: \n Type 0 for band solver \n Type 1 for gaussian solver \n" );
+    if( scanf("%d", &theSolverMode) != 1 || (theSolverMode != 0 && theSolverMode != 1))
+    {
+        // inform user and retry
+        printf("Unknown command: program stopped\n");
+        exit(EXIT_FAILURE);
+        return -1;
+    }
+    printf("================================================== \n");
+    
+    printf("\n%s\n",theHelpMessage);
     glfemWindowCreate("EPL1110 : Switched Reluctance Motor",480,480,theMotorMesh->nNode,theMotorMesh->X,theMotorMesh->Y);
     glfemWindowSetHelpMessage(theHelpMessage);                               
  
@@ -47,7 +59,7 @@ int main(void)
     double theDiscreteTime = 0.0;
     double theStartingTime = 0.0;
     // choose timeStep
-    double theTimeStep  = 0.005; //0.05; // 0.1;
+    double theTimeStep  = 0.001; //0.05; // 0.1;
     double theStop = 0;
     double omega = 1.0;
     int    thePlotMode = 1;
@@ -62,21 +74,24 @@ int main(void)
     double Couple;
     double SommeCouple = 0;
     double CoupleMoyen;
-    printf("iteration;Couple;omega\n");
+
+    int i =0;
+    
+    clock_t tic = clock();
+
+    //printf("iteration [];theta [°];theta [rad];Couple [Nm];omega [rad/s]\n");
     do
     {
         glfemWindowUpdate();
         char action = glfemGetAction(); 
 
-        //
         //  Gestion de l'animation en temps reel
         //  ------------------------------------
         //    - "theTime" est le temps courant de l'application (sauf si il a été remis a zero)
         //    - Le facteur entre le temps réel et le temps de l'application permet de controler la vitesse d'execution
         //    - Si necessaire, une nouvelle iteration discrete est calculee...
         //      C'est donc ici que se trouve "virtuellement" la boucle sur toutes les iterations temporelles
-        //
-
+        
         double theTime = (glfwGetTime() - theStartingTime) * 5;   
         
         //  Pour NE PAS figer le resultat a un temps, commenter la ligne ci-dessous       
@@ -208,20 +223,30 @@ int main(void)
             glfemPlotSolution(theStator,theMotor->a); 
         }
         
+        
+
         if (theTime > theDiscreteTime) 
         {
             theIteration += 1;
             theDiscreteTime += theTimeStep; 
 
-            //   Calcul du potentiel magnétique A
-            motorComputeMagneticPotential(theMotor);
+            //   Calcul du potentiel magnétique A par un solveur bande ou une élimination gaussienne
+            if(theSolverMode == 0)
+            // solveur bande
+            {
+                motorComputeMagneticPotential(theMotor);
+            }
+            else 
+            // élimination gaussienne
+            {
+                motorComputeMagneticPotentialFullSolver(theMotor);
+            }
             
             //   Calcul du couple
             Couple = motorComputeCouple(theMotor);
-            //printf()
             SommeCouple += Couple;
             CoupleMoyen = SommeCouple / theIteration;
-            printf("%d;%7f;%7f\n",theIteration, Couple, omega);
+            //printf("%d;%7f;%7f;%7f;%7f\n",theIteration, fmod(theMotor->theta * 180/M_PI, 360.0), fmod(theMotor->theta, 2*M_PI), Couple, omega);
 
             //   Calcul de omega par l'équation de Newton
             omega += Couple * theTimeStep / theMotor->inertia;
@@ -232,8 +257,15 @@ int main(void)
 
             //   Mise a jour des courants dans les inducteurs en fonction de l'angle
             motorComputeCurrent(theMotor);
-            //printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); 
+            printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); 
         }
+        /* Utilisé pour faire des graphes semblables
+        if(omega > 151) //rad/s
+        {
+            exit(EXIT_SUCCESS);
+            return 1;
+        }
+        */
 
         if( theMessageMode == 0)
         {
@@ -255,7 +287,7 @@ int main(void)
         
     } while(!glfemWindowShouldClose());
     
-    
+    printf("CPU time : %.5f [sec] \n", (clock() - tic) * 1.0 /CLOCKS_PER_SEC);
     exit(EXIT_SUCCESS);
     return 0;
   
@@ -329,6 +361,7 @@ motorMesh *motorMeshRead(const char *filename)
     fclose(file);
     return theMesh;
 } 
+
 motor *motorCreate(motorMesh *theMesh)
 {
     motor *theMotor = malloc(sizeof(motor));
@@ -458,4 +491,3 @@ femMesh *motorDomainCreate(const motorMesh *theMotorMesh, int iDomain)
     theMesh->nElem = theMotorMesh->nElemDomain[iDomain];
     return theMesh;
 }
-

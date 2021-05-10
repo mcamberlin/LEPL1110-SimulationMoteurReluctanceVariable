@@ -317,7 +317,7 @@ void printIntArray(const char* name, const int* ptr)
                     }
                     else if(noeudsExt[1] == -1)
                     {
-                        noeudsExt[1] == iNode;
+                        noeudsExt[1] = iNode;
                         indexNoeudsExt[1] = i;
                     }
                 }
@@ -344,6 +344,11 @@ void printIntArray(const char* name, const int* ptr)
             else if( nbNoeudsExt == 1 && nbNoeudsInt == 2)
             {
                 return 0;
+            }
+            else
+            // should never happen
+            {
+                return -1;
             }
     }
 
@@ -432,11 +437,10 @@ void printIntArray(const char* name, const int* ptr)
         theProblem->mesh  = theFemMesh;
         theProblem->space = femDiscreteCreate(3,FEM_TRIANGLE);        // utilisation de triangle
         theProblem->rule = femIntegrationCreate(3,FEM_TRIANGLE);      // règle de Hammer à 3 points
-        //theProblem->rule = femIntegrationCreate(4,FEM_QUAD);        // règle de Hammer à 4 points
         theProblem->size = theFemMesh->nNode;
         theProblem->sizeLoc = theProblem->mesh->nLocalNode;
         femMeshRenumber(theProblem->mesh,FEM_XNUM);                 // renumérotation selon X
-        theProblem->sourceValue = 1.0;    
+        theProblem->sourceValue = 1.0;                              
         theProblem->dirichletValue = 0.0;                           // valeur imposée sur la frontière est de 0
         theProblem->dirichlet = calloc(theProblem->size, sizeof(int));    
         femEdges *theEdges = femEdgesCreate(theProblem->mesh);
@@ -740,7 +744,7 @@ double motorComputeCouple(motor *theMotor)
             xLoc[iInteg] = x[0] * (1- xsi - eta) + x[1] * xsi + x[2] * eta;
             yLoc[iInteg] = y[0] * (1- xsi - eta) + y[1] * xsi + y[2] * eta;
             //Poids ajustés
-            weightsAjusted[iInteg] = theRule->weight[iInteg] * Jacobien;
+            weightsAjusted[iInteg] = weight * Jacobien;
             //Calcul intermédiaire de l'intégrale
             //I += weightsAjusted[iInteg] * f(xLoc[iInteg], yLoc[iInteg]);
  
@@ -854,7 +858,7 @@ void motorComputeCurrent(motor *theMotor)
 /** motorComputeMagneticPotentialFullSolver
  * inspirée de la solution du devoir 4 Poisson disponible sur https://www.youtube.com/watch?v=580gEIVVKe8.
  * utilisation d'une élimination gaussienne
- */
+
 void motorComputeMagneticPotentialFullSolver(motor* theMotor)
 {
     motorMesh* theMotorMesh = theMotor->mesh;
@@ -943,6 +947,7 @@ void motorComputeMagneticPotentialFullSolver(motor* theMotor)
     //femDiscreteFree(theSpace);      
 }   
 
+*/
 /** motorComputeMagneticPotential
  * inspirée de la solution du devoir 5 BandSolver
  * utilisation d'un solver bande
@@ -1054,12 +1059,11 @@ void motorComputeMagneticPotential(motor* theMotor)
 void motorFree(motor *theMotor)
 {
     free(theMotor->mesh->elem);
-    free(theMotor->mesh->X );
-    free(theMotor->mesh->Y );
-    free(theMotor->mesh->nElemDomain );
+    free(theMotor->mesh->X);
+    free(theMotor->mesh->Y);
+    free(theMotor->mesh->nElemDomain);
     free(theMotor->mesh->nameDomain);
     free(theMotor->mesh->domain);
-
     free(theMotor->mesh);
     free(theMotor->a);
     free(theMotor->movingNodes);

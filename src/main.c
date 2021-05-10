@@ -12,24 +12,22 @@
 int main(void)
 {  
     printf("================================================== \n");
-    motorMesh *theMotorMesh = motorMeshRead("../data/motor400.txt"); //maillage considéré
+    motorMesh *theMotorMesh = motorMeshRead("../data/motor838.txt"); //maillage considéré
     motor *theMotor = motorCreate(theMotorMesh);
     //motorPrintInfos(theMotor);
 
-    femMesh *theStator       = motorDomainCreate(theMotorMesh,0);
-    femMesh *theRotor        = motorDomainCreate(theMotorMesh,8);
-
-    femMesh *theCoilAP = motorDomainCreate(theMotorMesh,1);
-    femMesh *theCoilAN = motorDomainCreate(theMotorMesh,2);
-    femMesh *theCoilBP = motorDomainCreate(theMotorMesh,3);
-    femMesh *theCoilBN = motorDomainCreate(theMotorMesh,4);
-    femMesh *theCoilCP = motorDomainCreate(theMotorMesh,5);
-    femMesh *theCoilCN = motorDomainCreate(theMotorMesh,6);
-
-    femMesh *theRotorGap     = motorDomainCreate(theMotorMesh,10);
-    femMesh *theGap          = motorDomainCreate(theMotorMesh,11);
-    femMesh *theStatorGap    = motorDomainCreate(theMotorMesh,7);
-    femMesh *theRotorAir     = motorDomainCreate(theMotorMesh,9);
+    femMesh *theStator    = motorDomainCreate(theMotorMesh,0);
+    femMesh *theRotor     = motorDomainCreate(theMotorMesh,8);
+    femMesh *theCoilAP    = motorDomainCreate(theMotorMesh,1);
+    femMesh *theCoilAN    = motorDomainCreate(theMotorMesh,2);
+    femMesh *theCoilBP    = motorDomainCreate(theMotorMesh,3);
+    femMesh *theCoilBN    = motorDomainCreate(theMotorMesh,4);
+    femMesh *theCoilCP    = motorDomainCreate(theMotorMesh,5);
+    femMesh *theCoilCN    = motorDomainCreate(theMotorMesh,6);
+    femMesh *theRotorGap  = motorDomainCreate(theMotorMesh,10);
+    femMesh *theGap       = motorDomainCreate(theMotorMesh,11);
+    femMesh *theStatorGap = motorDomainCreate(theMotorMesh,7);
+    femMesh *theRotorAir  = motorDomainCreate(theMotorMesh,9);
 
 
     const char theHelpMessage[] = {
@@ -59,7 +57,7 @@ int main(void)
     double theDiscreteTime = 0.0;
     double theStartingTime = 0.0;
     // choose timeStep
-    double theTimeStep  = 0.005; //0.05; // 0.1;
+    double theTimeStep  = 0.01; //0.05; // 0.1;
     double theStop = 0;
     double omega = 1.0;
     int    thePlotMode = 1;
@@ -238,14 +236,14 @@ int main(void)
             else 
             // élimination gaussienne
             {
-                motorComputeMagneticPotentialFullSolver(theMotor);
+                //motorComputeMagneticPotentialFullSolver(theMotor);
             }
             
             //   Calcul du couple
             Couple = motorComputeCouple(theMotor);
             SommeCouple += Couple;
             CoupleMoyen = SommeCouple / theIteration;
-            printf("%d;%7f;%7f;%7f;%7f\n",theIteration, fmod(theMotor->theta * 180/M_PI, 360.0), fmod(theMotor->theta, 2*M_PI), Couple, omega);
+            //printf("%d;%7f;%7f;%7f;%7f\n",theIteration, fmod(theMotor->theta * 180/M_PI, 360.0), fmod(theMotor->theta, 2*M_PI), Couple, omega);
 
             //   Calcul de omega par l'équation de Newton
             omega += Couple * theTimeStep / theMotor->inertia;
@@ -256,15 +254,16 @@ int main(void)
 
             //   Mise a jour des courants dans les inducteurs en fonction de l'angle
             motorComputeCurrent(theMotor);
-            //printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); 
+            printf("Iteration  %2d - %.2f : %14.7e \n",theIteration,theDiscreteTime,theMotor->theta); 
         }
+        /*
         //Utilisé pour faire des graphes semblables
         if(omega > 151) //rad/s
         {
             exit(EXIT_SUCCESS);
             return 1;
         }
-        
+        */
 
         if( theMessageMode == 0)
         {

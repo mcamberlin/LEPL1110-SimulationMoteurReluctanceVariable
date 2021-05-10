@@ -42,7 +42,7 @@ femMesh        *motorDomainCreate(const motorMesh *theMotorMesh, int iDomain);
 motor          *motorCreate(motorMesh *theMotorMesh);
 void            motorPrintInfos(const motor *theMotor);
 void            motorComputeMagneticPotential(motor *myMotor);
-void            motorComputeMagneticPotentialFullSolver( motor* myMotor);
+//void            motorComputeMagneticPotentialFullSolver( motor* myMotor);
 double          motorComputeCouple(motor *myMotor);
 void            motorAdaptMesh(motor *myMotor, double delta);
 void            motorComputeCurrent(motor *myMotor);

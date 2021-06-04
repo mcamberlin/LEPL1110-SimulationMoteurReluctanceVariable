@@ -92,10 +92,6 @@ glad/glad.h
 GLFW/glfw3.h
 -
 
-/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/fem.c
-fem.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/fem.h
-
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/fem.h
 stdio.h
 -
@@ -106,16 +102,6 @@ math.h
 string.h
 -
 assert.h
--
-
-/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/glfem.c
-glfem.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/glfem.h
-stdio.h
--
-stdlib.h
--
-string.h
 -
 
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/glfem.h
@@ -134,12 +120,6 @@ glfem.h
 motor.h
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.h
 time.h
--
-
-/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.c
-motor.h
-/home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.h
-float.h
 -
 
 /home/merlin/Documents/LEPL1110 - Eléments finis/LEPL1110-SimulationMoteurReluctanceVariable/src/motor.h

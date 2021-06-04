@@ -42,14 +42,13 @@ int main(void)
     printf("Select the solver to use: \n Type 0 for band solver \n Type 1 for gaussian solver \n" );
     if( scanf("%d", &theSolverMode) != 1 || (theSolverMode != 0 && theSolverMode != 1))
     {
-        // inform user and retry
         printf("Unknown command: program stopped\n");
         exit(EXIT_FAILURE);
         return -1;
     }
     printf("================================================== \n");
     
-    printf("\n%s\n",theHelpMessage);
+    //printf("\n%s\n",theHelpMessage);
     glfemWindowCreate("EPL1110 : Switched Reluctance Motor",480,480,theMotorMesh->nNode,theMotorMesh->X,theMotorMesh->Y);
     glfemWindowSetHelpMessage(theHelpMessage);                               
  
@@ -236,7 +235,7 @@ int main(void)
             else 
             // élimination gaussienne
             {
-                //motorComputeMagneticPotentialFullSolver(theMotor);
+                motorComputeMagneticPotentialFullSolver(theMotor);
             }
             
             //   Calcul du couple
@@ -286,10 +285,24 @@ int main(void)
     } while(!glfemWindowShouldClose());
     
     //printf("CPU time : %.5f [sec] \n", (clock() - tic) * 1.0 /CLOCKS_PER_SEC);
+
+    free(theRotor);
+    free(theStator);
+    free(theGap);
+    free(theCoilAP);
+    free(theCoilAN);
+    free(theCoilBP);
+    free(theCoilBN);
+    free(theCoilCP);
+    free(theCoilCN);
+    free(theRotorGap);
+    free(theStatorGap);
+    free(theRotorAir);
+    motorFree(theMotor);
+    motorMeshFree(theMotorMesh);
+
     exit(EXIT_SUCCESS);
-    return 0;
-  
-    
+    return 0;    
 }
 
 
@@ -297,7 +310,7 @@ int main(void)
 // =========== Quelques fonctions fournies gracieusement par l'équipe didactique ====== //
 //
 // Attention : il n'est pas permis de les modifier :-)
-// Attention : la structure de données du probléme est figée et vous ne pouvez pas
+// Attention : la structure de données du problème est figée et vous ne pouvez pas
 //             la modifier : c'est cette structure que le correcteur automatique
 //             utilisera pour tester votre programme
 //
@@ -319,88 +332,32 @@ static const double _hystereticCurveB[43] =  { 0.0,
       3.32303272825, 5.85485500678, 13.2701832298, 35.2114648741, 99.8027446541,
       291.062951228, 854.036370229, 2515.3105707 };   
 
-motorMesh *motorMeshRead(const char *filename)
-{
-    motorMesh *theMesh = malloc(sizeof(motorMesh));
-    theMesh->nLocalNode = 3;
-    
-    FILE* file = fopen(filename,"r");
-    if (file == NULL) Error("No mesh file !");   
-    int i,j,trash,*elem;
-     
-    // Lecture des différents noeuds
-    ErrorScan(fscanf(file, "Number of nodes %d\n", &theMesh->nNode));
-    theMesh->X = malloc(sizeof(double)*theMesh->nNode);
-    theMesh->Y = malloc(sizeof(double)*theMesh->nNode);     
-    for (i = 0; i < theMesh->nNode; i++) 
-    {
-        ErrorScan(fscanf(file,"%d : %le %le\n",&trash,&theMesh->X[i],&theMesh->Y[i])); 
-    }    
-    
-    // Lecture des différents sous-domaines
-    ErrorScan(fscanf(file, "Number of sub-domains %d \n", &theMesh->nDomain)); 
-    theMesh->nameDomain = malloc(sizeof(string)*theMesh->nDomain);
-    theMesh->nElemDomain = malloc(sizeof(int)*theMesh->nDomain);
-    for(i = 0; i < theMesh->nDomain; i++) 
-    {
-        ErrorScan(fscanf(file, "%6d : %s : %d\n",&trash,theMesh->nameDomain[i],&theMesh->nElemDomain[i]));
-    }
-    
-    // Lecture du maillage de chacun des 12 sous-domaines
-    ErrorScan(fscanf(file, "Number of triangles %d  \n", &theMesh->nElem));   
-    theMesh->elem = malloc(sizeof(int)*3*theMesh->nElem);
-    theMesh->domain = malloc(sizeof(int)*theMesh->nElem);
-    for (i = 0; i < theMesh->nElem; i++) 
-    {
-    	elem = &(theMesh->elem[i*3]);
-    	ErrorScan(fscanf(file,"%d : %d %d %d %d\n",&trash,&elem[0],&elem[1],&elem[2],&theMesh->domain[i])); 
-    }
-    
-    fclose(file);
-    return theMesh;
-} 
-
 motor *motorCreate(motorMesh *theMesh)
 {
     motor *theMotor = malloc(sizeof(motor));
     theMotor->mesh = theMesh;
     theMotor->size = theMesh->nNode;
-
-
-    //  Identification des noeuds mobiles       
+      
     theMotor->movingNodes = malloc(sizeof(int)*theMesh->nNode);
     for (int i=0; i < theMotor->size; i++) 
-    {
         theMotor->movingNodes[i] = 0;
-    }   
-    
-    for (int i=0; i < theMesh->nElem; i++) 
-    {
+    for (int i=0; i < theMesh->nElem; i++) {
         int domain = theMesh->domain[i];
-        if (domain == 8 || domain == 9 || domain == 10 ) 
-        //Rotor_core, Rotor_air, Rotor_gap
-        {
+        if (domain == 8 || domain == 9 || domain == 10 ) {
             int *elem = &(theMesh->elem[i*3]);
-            for (int j=0; j < 3; j++) 
-            {
-                theMotor->movingNodes[elem[j]] = 1; 
-            }
-        }
-    }
-
-    //  Initialisation des inconnues à la valeur X pour voir le maillage tourner
+            for (int j=0; j < 3; j++) {
+                theMotor->movingNodes[elem[j]] = 1; }}}
+  
     theMotor->a = malloc(sizeof(double)*theMotor->size);
-    for (int i=0; i < theMotor->size; i++) 
-    {
+    for (int i=0; i < theMotor->size; i++) {
         theMotor->a[i] = theMesh->X[i];
         //printf(" %e \n",theMotor->a[i]); 
-    }
+        }
         
     theMotor->theta = 0;
     theMotor->omega = 0;
     theMotor->time  = 0;
-
-    //  Parametres matériels    
+    
     double mu_0 = 4*3.141592653589793*1e-7; //kg m /(A**2 s**2)
     double mu_r = 1e3;                      
     double js   = 8.8464*1e5;               // A / m**2
@@ -408,22 +365,19 @@ motor *motorCreate(motorMesh *theMesh)
     theMotor->L       = 0.06;               // m
     theMotor->js = malloc(sizeof(double)*theMesh->nDomain);
     theMotor->mu = malloc(sizeof(double)*theMesh->nDomain);  
-    for(int i = 0; i < theMesh->nDomain; i++) 
-    {
+    for(int i = 0; i < theMesh->nDomain; i++) {
         theMotor->js[i] = 0.0;
-        theMotor->mu[i] = mu_0; 
-    }
+        theMotor->mu[i] = mu_0; }
     theMotor->mu[0] *= mu_r;
     theMotor->mu[8] *= mu_r;
     theMotor->js[1] = js;
-    theMotor->js[2] = -js;
- 
-    //  Bonus : magnetostatique non-lineaire
+    theMotor->js[2] = -js;  
+     
     theMotor->nonLinearFlag = 0;
     theMotor->nHystereticCurve = 43;
     theMotor->hystereticCurveH = _hystereticCurveH;
     theMotor->hystereticCurveB = _hystereticCurveB;
-
+    
     return theMotor;
 }
 
@@ -434,9 +388,8 @@ void motorPrintInfos(const motor *theMotor)
     printf(" \n");
     printf(" ====== Switched Reluctance Motor Simulation ============================\n");
     for(int i = 0; i < theMesh->nDomain; i++) 
-    {
-        printf(" Domain %2d : %-16s : nElem = %6d, mu = %10.3e, js = %10.3e \n",i,theMesh->nameDomain[i], theMesh->nElemDomain[i],theMotor->mu[i],theMotor->js[i]);
-    }        
+        printf("    Domain %2d : %-16s : nElem = %6d, mu = %10.3e, js = %10.3e \n",i,theMesh->nameDomain[i],
+                    theMesh->nElemDomain[i],theMotor->mu[i],theMotor->js[i]);
     printf("                                 : mu permeability [kg m s2/A2] - js current density [A/m2]\n");
     printf("    Number of elements           : %d\n",theMesh->nElem);   
     printf("    Number of nodes              : %d\n",theMotor->size);  
@@ -449,6 +402,38 @@ void motorPrintInfos(const motor *theMotor)
     printf("=========================================================================\n");
 
 
+}
+
+motorMesh *motorMeshRead(const char *filename)
+{
+    motorMesh *theMesh = malloc(sizeof(motorMesh));
+    theMesh->nLocalNode = 3;
+    
+    FILE* file = fopen(filename,"r");
+    if (file == NULL) Error("No mesh file !");   
+    int i,j,trash,*elem;
+     
+    ErrorScan(fscanf(file, "Number of nodes %d\n", &theMesh->nNode));
+    theMesh->X = malloc(sizeof(double)*theMesh->nNode);
+    theMesh->Y = malloc(sizeof(double)*theMesh->nNode);     
+    for (i = 0; i < theMesh->nNode; i++) 
+         ErrorScan(fscanf(file,"%d : %le %le\n",&trash,&theMesh->X[i],&theMesh->Y[i])); 
+    
+    ErrorScan(fscanf(file, "Number of sub-domains %d \n", &theMesh->nDomain)); 
+    theMesh->nameDomain = malloc(sizeof(string)*theMesh->nDomain);
+    theMesh->nElemDomain = malloc(sizeof(int)*theMesh->nDomain);
+    for(i = 0; i < theMesh->nDomain; i++) 
+     	  ErrorScan(fscanf(file, "%6d : %s : %d\n",&trash,theMesh->nameDomain[i],&theMesh->nElemDomain[i]));
+    	   
+    ErrorScan(fscanf(file, "Number of triangles %d  \n", &theMesh->nElem));   
+    theMesh->elem = malloc(sizeof(int)*3*theMesh->nElem);
+    theMesh->domain = malloc(sizeof(int)*theMesh->nElem);
+    for (i = 0; i < theMesh->nElem; i++) {
+    	  elem = &(theMesh->elem[i*3]);
+    	  ErrorScan(fscanf(file,"%d : %d %d %d %d\n",&trash,&elem[0],&elem[1],&elem[2],&theMesh->domain[i])); }
+    
+    fclose(file);
+    return theMesh;
 }
 
 void motorMeshWrite(const motorMesh *theMesh, const char *filename)
@@ -472,6 +457,17 @@ void motorMeshWrite(const motorMesh *theMesh, const char *filename)
     fclose(file);
 }
 
+void motorMeshFree(motorMesh *theMesh)
+{
+    free(theMesh->elem);
+    free(theMesh->nElemDomain);
+    free(theMesh->nameDomain);
+    free(theMesh->X);
+    free(theMesh->Y);
+    free(theMesh->domain);
+    free(theMesh);
+}
+
 femMesh *motorDomainCreate(const motorMesh *theMotorMesh, int iDomain)
 {
     femMesh *theMesh = malloc(sizeof(femMesh)); 
@@ -482,9 +478,7 @@ femMesh *motorDomainCreate(const motorMesh *theMotorMesh, int iDomain)
     
     int shift = 0;
     for (int i=0; i < iDomain; i++)
-    {
-        shift += theMotorMesh->nElemDomain[i];
-    }  
+      shift += theMotorMesh->nElemDomain[i];
     theMesh->elem = &theMotorMesh->elem[3*shift];
     theMesh->nElem = theMotorMesh->nElemDomain[iDomain];
     return theMesh;

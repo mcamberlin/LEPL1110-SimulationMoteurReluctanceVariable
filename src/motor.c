@@ -130,7 +130,7 @@ void printIntArray(const char* name, const int* ptr)
 
     void freeFemMeshConverted(femMesh* theFemMesh)
     {
-        //free(theFemMesh->number);
+        free(theFemMesh->number);
         free(theFemMesh);
     }
 
@@ -459,6 +459,15 @@ void printIntArray(const char* name, const int* ptr)
         return theProblem;
     }
 
+    void myFemDiffusionFree(femDiffusionProblem *theProblem)
+    {
+        femIntegrationFree(theProblem->rule);
+        femDiscreteFree(theProblem->space);
+        femSolverFree(theProblem->solver);
+        free(theProblem->dirichlet);
+        free(theProblem->soluce);
+        free(theProblem);
+    }
 
 //
 // ========= Projet à réaliser ===================
@@ -780,6 +789,10 @@ double motorComputeCouple(motor *theMotor)
     } 
     couple = (-L/(MU_0 * d) ) *couple ; 
     //printf("Couple : %f [Nm]\n", couple);
+
+    freeFemMeshConverted(theFemMesh);
+    femIntegrationFree(theRule);
+    femDiscreteFree(theSpace);
     return couple;
 }
 
@@ -792,7 +805,8 @@ void motorComputeCurrent(motor *theMotor)
     angle = fmod( theMotor->theta, M_PI);
     angle = fabs(angle);
 
-    if (0.0 <= angle && angle < M_PI/6.0)
+    double offset = 0.0;
+    if (0.0- offset <= angle && angle < M_PI/6.0 - offset)
     // [0°, 30°[
     {
         theMotor->js[Coil_AP] = -js;
@@ -802,7 +816,7 @@ void motorComputeCurrent(motor *theMotor)
         theMotor->js[Coil_CP] = 0;
         theMotor->js[Coil_CN] = 0;
     } 
-    else if (M_PI/6.0 <= angle && angle < 2*M_PI/6.0)
+    else if (M_PI/6.0 - offset<= angle && angle < 2*M_PI/6.0 - offset)
     // [30°, 60°[
     {
         theMotor->js[Coil_AP] = -js;
@@ -812,7 +826,7 @@ void motorComputeCurrent(motor *theMotor)
         theMotor->js[Coil_CP] = js;
         theMotor->js[Coil_CN] = -js;
     } 
-    else if (2*M_PI/6.0 <= angle && angle < M_PI/2.0)
+    else if (2*M_PI/6.0 -offset <= angle && angle < M_PI/2.0 - offset)
     // [60°, 90°[
     {
         theMotor->js[Coil_AP] = 0.0;
@@ -822,7 +836,7 @@ void motorComputeCurrent(motor *theMotor)
         theMotor->js[Coil_CP] = js;
         theMotor->js[Coil_CN] = -js;
     }
-    else if (M_PI/2.0 <= angle && angle < 4*M_PI/6.0)
+    else if (M_PI/2.0 -offset <= angle && angle < 4*M_PI/6.0 - offset)
     // [90°, 120°[
     {
         theMotor->js[Coil_AP] = js;
@@ -832,7 +846,7 @@ void motorComputeCurrent(motor *theMotor)
         theMotor->js[Coil_CP] = 0;
         theMotor->js[Coil_CN] = 0;
     } 
-    else if (4*M_PI/6.0 <= angle && angle < 5*M_PI/6.0)
+    else if (4*M_PI/6.0 - offset <= angle && angle < 5*M_PI/6.0 - offset)
     // [120°, 150°[
     {
         theMotor->js[Coil_AP] = js;
@@ -842,7 +856,7 @@ void motorComputeCurrent(motor *theMotor)
         theMotor->js[Coil_CP] = -js;
         theMotor->js[Coil_CN] = js;
     } 
-    else if (5*M_PI/6.0 <= angle && angle < M_PI)
+    else if (5*M_PI/6.0 -offset <= angle && angle < M_PI -offset)
     // [150°, 180°[
     {
         theMotor->js[Coil_AP] = 0;
@@ -852,13 +866,13 @@ void motorComputeCurrent(motor *theMotor)
         theMotor->js[Coil_CP] = -js;
         theMotor->js[Coil_CN] = js;
     }    
-    return;   
+    return;
 }
 
 /** motorComputeMagneticPotentialFullSolver
  * inspirée de la solution du devoir 4 Poisson disponible sur https://www.youtube.com/watch?v=580gEIVVKe8.
  * utilisation d'une élimination gaussienne
-
+*/
 void motorComputeMagneticPotentialFullSolver(motor* theMotor)
 {
     motorMesh* theMotorMesh = theMotor->mesh;
@@ -941,13 +955,11 @@ void motorComputeMagneticPotentialFullSolver(motor* theMotor)
     // libérer toutes les mémoires allouées:
     freeFemMeshConverted(theFemMesh);
     
-    //femEdgesFree(theEdges);
-    //femFullSystemFree(theSystem);
-    //femIntegrationFree(theRule);
-    //femDiscreteFree(theSpace);      
+    femIntegrationFree(theRule);
+    femDiscreteFree(theSpace);  
+    femEdgesFree(theEdges);
 }   
 
-*/
 /** motorComputeMagneticPotential
  * inspirée de la solution du devoir 5 BandSolver
  * utilisation d'un solver bande
@@ -963,7 +975,6 @@ void motorComputeMagneticPotential(motor* theMotor)
 
     femMesh* theFemMesh = motorMeshToFemMeshConverter(theMotorMesh);
     femDiffusionProblem* theProblem = myFemDiffusionCreate(theFemMesh);
-    //femSolverPrintInfos(theProblem->solver);
 
     femIntegration *theRule = theProblem->rule;
     femDiscrete *theSpace = theProblem->space;
@@ -1053,24 +1064,15 @@ void motorComputeMagneticPotential(motor* theMotor)
     
     // libérer toutes les mémoires allouées:
     freeFemMeshConverted(theFemMesh);
-    //femDiffusionFree(theProblem);
+    myFemDiffusionFree(theProblem);
 }
 
 void motorFree(motor *theMotor)
 {
-    free(theMotor->mesh->elem);
-    free(theMotor->mesh->X);
-    free(theMotor->mesh->Y);
-    free(theMotor->mesh->nElemDomain);
-    free(theMotor->mesh->nameDomain);
-    free(theMotor->mesh->domain);
-    free(theMotor->mesh);
     free(theMotor->a);
     free(theMotor->movingNodes);
     free(theMotor->js);
     free(theMotor->mu);
-    free((void*) theMotor->hystereticCurveH);
-    free((void*) theMotor->hystereticCurveB);
     free(theMotor);
     return;
 }
